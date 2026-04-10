@@ -1,2 +1,0 @@
-Columns: ['date', 'code', 'open', 'high', 'low', 'close', 'volume', 'amount']
-Rows: 0

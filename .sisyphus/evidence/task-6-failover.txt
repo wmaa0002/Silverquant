@@ -1,5 +1,0 @@
-=== QA Scenario 1: Failover Test ===
-TUSHARE_TOKEN未设置，无法使用tushare数据源
-TUSHARE_TOKEN未设置或无效，使用akshare获取日线数据
-Source: tushare, Rows: 7
-

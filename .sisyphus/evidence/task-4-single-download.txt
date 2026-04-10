@@ -1,4 +1,0 @@
-Success: True, Error: 
-DataFrame rows: 1
-        date    code    close
-0 2026-01-15  600519  1388.89
