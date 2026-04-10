@@ -1,0 +1,44 @@
+# Evidence for save_daily_price_to_db implementation
+
+## Test 1: Initial Write
+```bash
+python -c "
+import pandas as pd
+df = pd.DataFrame({
+  'date': ['2026-01-15'],
+  'code': ['TEST01'],
+  'open': [100.0], 'high': [101.0], 'low': [99.0],
+  'close': [100.5], 'volume': [1000000], 'amount': [100000000.0]
+})
+from data.updaters.fetcher_daily_price_tushare import save_daily_price_to_db
+save_daily_price_to_db(df, 'data/Astock3.duckdb', target_table='daily_price_tushare_test')
+print('Write success')
+"
+```
+Output: Write success
+
+Verification:
+```
+SELECT * FROM daily_price_tushare_test WHERE code='TEST01'
+Result: (datetime.date(2026, 1, 15), 'TEST01', 100.0, 101.0, 99.0, 100.5, 1000000, 100000000.0, None, None, None, None, None)
+```
+
+## Test 2: INSERT OR REPLACE (update existing row)
+```python
+# Same code, different price
+df2 = pd.DataFrame({
+  'date': ['2026-01-15'],
+  'code': ['TEST01'],
+  'open': [200.0], 'high': [201.0], 'low': [199.0],
+  'close': [200.5], 'volume': [2000000], 'amount': [200000000.0]
+})
+save_daily_price_to_db(df2, 'data/Astock3.duckdb', target_table='daily_price_tushare_test')
+```
+Result: (datetime.date(2026, 1, 15), 'TEST01', 200.0, 201.0, 199.0, 200.5, 2000000, 200000000.0, None, None, None, None, None)
+✓ Row updated correctly (open: 100→200)
+
+## Implementation Summary
+- Function: save_daily_price_to_db(df, db_path, target_table='daily_price_tushare_test')
+- Uses INSERT OR REPLACE pattern (lines 64-66 in V4)
+- Handles: None values in object columns, date conversion
+- Parameters: df with date/code/open/high/low/close/volume/amount

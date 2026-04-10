@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多Agent分析历史</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-blue: #3b82f6;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --border-color: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --decision-buy: #10b981;
+            --decision-hold: #f59e0b;
+            --decision-sell: #ef4444;
+        }
+        body { background: var(--bg-dark); color: var(--text-primary); }
+        .glass-card { background: rgba(30,41,59,0.8); backdrop-filter: blur(10px); border: 1px solid var(--border-color); }
+        .decision-buy { color: var(--decision-buy); }
+        .decision-hold { color: var(--decision-hold); }
+        .decision-sell { color: var(--decision-sell); }
+        input[type="text"], input[type="date"] { background: #1e293b; border: 1px solid #334155; color: #f1f5f9; padding: 0.5rem 1rem; border-radius: 0.5rem; }
+        input:focus { outline: none; border-color: #3b82f6; }
+        @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid #334155; }
+        th { color: #94a3b8; font-weight: 500; }
+    </style>
+</head>
+<body class="min-h-screen p-6">
+    <div class="max-w-6xl mx-auto">
+        <!-- Navigation -->
+        <div class="flex items-center gap-4 mb-6">
+            <a href="/" class="flex items-center gap-2 text-slate-400 hover:text-white">
+                <span>←</span>
+                <span>返回持仓</span>
+            </a>
+            <span class="text-slate-600">|</span>
+            <a href="/agent" class="text-blue-400 hover:text-blue-300">多Agent分析</a>
+            <span class="text-slate-600">|</span>
+            <span class="text-white">历史记录</span>
+        </div>
+        
+        <!-- Page Header -->
+        <div class="mb-6">
+            <h1 class="text-2xl font-bold text-white">多Agent分析历史</h1>
+            <p class="text-slate-400 mt-1">查看历史分析记录</p>
+        </div>
+        
+        <!-- Filter Section -->
+        <div id="filter-section" class="glass-card p-6 mb-6">
+            <div class="flex flex-wrap gap-4 items-end">
+                <!-- Stock Symbol Filter -->
+                <div class="flex-1 min-w-[200px]">
+                    <label class="block text-sm text-slate-400 mb-1">股票代码</label>
+                    <input type="text" id="filter-symbol" placeholder="如: 600519" 
+                           class="w-full bg-slate-800 border border-slate-600 text-white px-3 py-2 rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+                
+                <!-- Start Date Filter -->
+                <div class="flex-1 min-w-[150px]">
+                    <label class="block text-sm text-slate-400 mb-1">开始日期</label>
+                    <input type="date" id="filter-start-date" 
+                           class="w-full bg-slate-800 border border-slate-600 text-white px-3 py-2 rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+                
+                <!-- End Date Filter -->
+                <div class="flex-1 min-w-[150px]">
+                    <label class="block text-sm text-slate-400 mb-1">结束日期</label>
+                    <input type="date" id="filter-end-date" 
+                           class="w-full bg-slate-800 border border-slate-600 text-white px-3 py-2 rounded-lg focus:outline-none focus:border-blue-500">
+                </div>
+                
+                <!-- Search Button -->
+                <div>
+                    <button id="btn-search" 
+                            class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                        搜索
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- History List -->
+        <div id="history-section" class="glass-card p-6">
+            <!-- Section Header -->
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold">历史记录</h2>
+                <span id="history-count" class="text-sm text-slate-400">共 0 条</span>
+            </div>
+
+            <!-- History Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-left text-slate-400 border-b border-slate-700">
+                            <th class="pb-3 pr-4">股票代码</th>
+                            <th class="pb-3 pr-4">交易日期</th>
+                            <th class="pb-3 pr-4">分析时间</th>
+                            <th class="pb-3">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-table-body">
+                        <tr>
+                            <td colspan="4" class="py-8 text-center text-slate-500">暂无数据</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="flex justify-between items-center mt-4 pt-4 border-t border-slate-700">
+                <button id="btn-prev" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    ← 上一页
+                </button>
+                <span id="page-info" class="text-slate-400 text-sm">第 1 页</span>
+                <button id="btn-next" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    下一页 →
+                </button>
+            </div>
+        </div>
+        
+        <!-- Detail Modal (Task 6 will add content) -->
+        <div id="detail-modal" class="fixed inset-0 bg-black/50 hidden z-50">
+            <div class="max-w-4xl mx-auto mt-10 bg-slate-800 rounded-xl p-6 max-h-[80vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">分析详情</h2>
+                    <button id="btn-close-modal" class="text-slate-400 hover:text-white">✕</button>
+                </div>
+                <div id="detail-content">
+                    <!-- Will be populated by displayResults() in Task 6 -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+    // ====== Text Formatting Utilities ======
+    function formatTextAsHtml(text, options) {
+        if (!text) return '<span class="text-slate-500">-</span>';
+        
+        options = Object.assign({
+            maxLength: 300,
+            showToggle: true,
+            className: 'text-slate-300'
+        }, options || {});
+        
+        // Handle empty/null values
+        if (!text || text === '无' || text === 'null' || text === 'undefined') {
+            return '<span class="text-slate-500">-</span>';
+        }
+        
+        var result = '';
+        var lines = text.split('\n').filter(function(l) { return l.trim(); });
+        
+        // Check if text is list-like
+        var isList = lines.length > 1 && lines.every(function(line) {
+            return /^[-\d*•]/.test(line.trim()) || /^\d+[．、.]/.test(line.trim());
+        });
+        
+        if (isList) {
+            // Render as list
+            var listType = /^\d/.test(lines[0].trim()) ? 'ol' : 'ul';
+            var items = lines.map(function(line) {
+                var content = line.replace(/^[-*\d\s．、.]+/, '').trim();
+                if (!content) return '';
+                return '<li class="mb-1">' + content + '</li>';
+            }).filter(function(item) { return item !== ''; }).join('');
+            
+            if (items) {
+                result = '<' + listType + ' class="' + (listType === 'ol' ? 'list-decimal' : 'list-disc') + ' pl-5 space-y-1 text-sm">' + items + '</' + listType + '>';
+            }
+        } else {
+            // Render as paragraphs
+            var paragraphs = text.split(/\n\n+/).filter(function(p) { return p.trim(); });
+            if (paragraphs.length > 1) {
+                result = paragraphs.map(function(p) {
+                    return '<p class="mb-3">' + p.trim().replace(/\n/g, '<br>') + '</p>';
+                }).join('');
+            } else {
+                result = '<p>' + text.replace(/\n/g, '<br>') + '</p>';
+            }
+        }
+        
+        // Handle truncation for long text
+        if (options.maxLength && text.length > options.maxLength) {
+            var shortText = text.substring(0, options.maxLength).replace(/\n/g, ' ');
+            var toggleId = 'toggle-' + Math.random().toString(36).substr(2, 9);
+            result = '<div class="' + options.className + '">' +
+                '<div id="' + toggleId + '-short" class="line-clamp-3">' + shortText + '...</div>' +
+                '<div id="' + toggleId + '-full" class="hidden">' + result + '</div>' +
+                (options.showToggle ? 
+                    '<button class="text-blue-400 hover:text-blue-300 text-sm mt-2 focus:outline-none" ' +
+                    'onclick="toggleText(\'' + toggleId + '\', this)">展开全部 ▼</button>' : '') +
+            '</div>';
+        } else {
+            result = '<div class="' + options.className + '">' + result + '</div>';
+        }
+        
+        return result;
+    }
+    
+    function toggleText(id, btn) {
+        var shortEl = document.getElementById(id + '-short');
+        var fullEl = document.getElementById(id + '-full');
+        
+        if (shortEl.classList.contains('hidden')) {
+            shortEl.classList.remove('hidden');
+            fullEl.classList.add('hidden');
+            if (btn) btn.textContent = '展开全部 ▼';
+        } else {
+            shortEl.classList.add('hidden');
+            fullEl.classList.remove('hidden');
+            if (btn) btn.textContent = '收起 ▲';
+        }
+    }
+
+    // Pagination state
+    var historyOffset = 0;
+    var historyLimit = 10;
+
+    function loadHistory() {
+        var symbol = document.getElementById('filter-symbol').value.trim();
+        var startDate = document.getElementById('filter-start-date').value;
+        var endDate = document.getElementById('filter-end-date').value;
+        
+        // Build query params
+        var params = '?limit=' + historyLimit + '&offset=' + historyOffset;
+        if (symbol) params += '&symbol=' + encodeURIComponent(symbol);
+        if (startDate) params += '&start_date=' + startDate;
+        if (endDate) params += '&end_date=' + endDate;
+        
+        fetch('/api/agent/history' + params)
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (data.success && data.data) {
+                    renderHistoryTable(data.data);
+                    updatePagination(data.data.length);
+                }
+            })
+            .catch(function(err) {
+                console.error('Failed to load history:', err);
+            });
+    }
+
+    function renderHistoryTable(records) {
+        var tbody = document.getElementById('history-table-body');
+        var countSpan = document.getElementById('history-count');
+        
+        if (!records || records.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="py-8 text-center text-slate-500">暂无数据</td></tr>';
+            countSpan.textContent = '共 0 条';
+            return;
+        }
+        
+        countSpan.textContent = '共 ' + records.length + ' 条';
+        
+        tbody.innerHTML = records.map(function(record) {
+            var date = new Date(record.created_at);
+            var dateStr = date.toLocaleDateString('zh-CN');
+            var timeStr = date.toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'});
+            
+            return '<tr class="border-b border-slate-700/50 hover:bg-slate-700/30">' +
+                '<td class="py-3 pr-4 font-mono text-blue-400">' + record.symbol + '</td>' +
+                '<td class="py-3 pr-4 text-slate-300">' + record.trade_date + '</td>' +
+                '<td class="py-3 pr-4 text-slate-400 text-sm">' + dateStr + ' ' + timeStr + '</td>' +
+                '<td class="py-3">' +
+                    '<button class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm" ' +
+                            'onclick="viewHistoryDetail(\'' + record.run_id + '\')">查看</button>' +
+                '</td>' +
+            '</tr>';
+        }).join('');
+    }
+
+    function updatePagination(currentPageCount) {
+        var prevBtn = document.getElementById('btn-prev');
+        var nextBtn = document.getElementById('btn-next');
+        var pageInfo = document.getElementById('page-info');
+        
+        prevBtn.disabled = historyOffset === 0;
+        nextBtn.disabled = currentPageCount < historyLimit;
+        
+        var currentPage = Math.floor(historyOffset / historyLimit) + 1;
+        pageInfo.textContent = '第 ' + currentPage + ' 页';
+    }
+
+    // Pagination handlers
+    document.getElementById('btn-prev').addEventListener('click', function() {
+        historyOffset = Math.max(0, historyOffset - historyLimit);
+        loadHistory();
+    });
+
+    document.getElementById('btn-next').addEventListener('click', function() {
+        historyOffset += historyLimit;
+        loadHistory();
+    });
+
+    function viewHistoryDetail(runId) {
+        // Show loading state in modal
+        var modal = document.getElementById('detail-modal');
+        var content = document.getElementById('detail-content');
+        modal.classList.remove('hidden');
+        content.innerHTML = '<div class="text-center py-8 text-slate-400">加载中...</div>';
+        
+        // Fetch full analysis result
+        fetch('/api/agent/history?run_id=' + encodeURIComponent(runId))
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (data.success && data.data && data.data.length > 0) {
+                    var result = data.data[0].result;
+                    displayHistoryResult(result);
+                } else {
+                    content.innerHTML = '<div class="text-center py-8 text-red-400">加载失败</div>';
+                }
+            })
+            .catch(function(err) {
+                console.error('Failed to load history detail:', err);
+                content.innerHTML = '<div class="text-center py-8 text-red-400">加载失败: ' + err.message + '</div>';
+            });
+    }
+
+    function displayHistoryResult(data) {
+        var content = document.getElementById('detail-content');
+        
+        // Build HTML for all sections
+        var html = '';
+        
+        // Decision section
+        var decision = data.final_decision || data.research?.recommendation || '观望';
+        var decisionClass = 'text-5xl font-bold tracking-wide ';
+        if (decision.includes('买')) decisionClass += 'decision-buy';
+        else if (decision.includes('卖')) decisionClass += 'decision-sell';
+        else decisionClass += 'decision-hold';
+        
+        html += '<div class="text-center mb-6">' +
+            '<p class="' + decisionClass + '">' + decision + '</p></div>';
+        
+        // Confidence bar
+        var confidence = (data.confidence || data.research?.confidence || 0.5) * 100;
+        html += '<div class="mb-6">' +
+            '<div class="flex justify-between text-sm text-slate-400 mb-1">' +
+                '<span>置信度</span><span>' + confidence.toFixed(0) + '%</span>' +
+            '</div>' +
+            '<div class="w-full bg-slate-700 rounded-full h-3">' +
+                '<div class="h-full rounded-full bg-blue-500" style="width:' + confidence + '%"></div>' +
+            '</div></div>';
+        
+        // Trading signal
+        var signal = data.trading_signal || {};
+        html += '<div class="grid grid-cols-4 gap-4 mb-6 p-4 bg-slate-800/50 rounded-lg">' +
+            '<div class="text-center"><p class="text-xs text-slate-500">入场价</p><p class="font-bold">' + (signal.entry_price || '-') + '</p></div>' +
+            '<div class="text-center"><p class="text-xs text-slate-500">止损</p><p class="font-bold text-red-400">' + (signal.stop_loss || '-') + '</p></div>' +
+            '<div class="text-center"><p class="text-xs text-slate-500">止盈</p><p class="font-bold text-green-400">' + (signal.take_profit || '-') + '</p></div>' +
+            '<div class="text-center"><p class="text-xs text-slate-500">仓位</p><p class="font-bold">' + (signal.position_size ? (signal.position_size * 100).toFixed(0) + '%' : '-') + '</p></div>' +
+        '</div>';
+        
+        // Research Manager
+        var research = data.research || {};
+        html += '<div class="mb-4 p-4 bg-slate-800/50 rounded-lg">' +
+            '<h3 class="font-semibold mb-2">研究经理结论</h3>' +
+            '<p class="text-sm text-slate-400">推荐: <span class="text-blue-400">' + (research.recommendation || '-') + '</span></p>' +
+            '<p class="text-sm text-slate-400 mb-1">推理:</p>' + formatTextAsHtml(research.reasoning, {maxLength: 300, showToggle: true, className: 'text-sm leading-relaxed'}) + '</div>';
+        
+        // Risk Manager
+        var risk = data.risk || {};
+        var riskColor = risk.risk_level === 'LOW' ? 'text-green-400' : (risk.risk_level === 'HIGH' ? 'text-red-400' : 'text-yellow-400');
+        html += '<div class="mb-4 p-4 bg-slate-800/50 rounded-lg">' +
+            '<h3 class="font-semibold mb-2">风险经理评估</h3>' +
+            '<p class="text-sm text-slate-400">风险等级: <span class="' + riskColor + ' font-bold">' + (risk.risk_level || '-') + '</span></p>' +
+            '<p class="text-sm text-slate-400">建议止损: <span class="text-red-400">' + (risk.stop_loss || '-') + '</span></p></div>';
+        
+        // Bull/Bear Confidence
+        html += '<div class="grid grid-cols-2 gap-4 mb-4">';
+        if (data.bull_confidence != null) {
+            html += '<div class="p-3 bg-green-500/10 rounded-lg">' +
+                '<p class="text-xs text-slate-400">多头置信度</p>' +
+                '<p class="text-xl font-bold text-green-400">' + (data.bull_confidence * 100).toFixed(0) + '%</p></div>';
+        }
+        if (data.bear_confidence != null) {
+            html += '<div class="p-3 bg-red-500/10 rounded-lg">' +
+                '<p class="text-xs text-slate-400">空头置信度</p>' +
+                '<p class="text-xl font-bold text-red-400">' + (data.bear_confidence * 100).toFixed(0) + '%</p></div>';
+        }
+        html += '</div>';
+        
+        // Reports
+        var reports = data.reports || {};
+        html += '<div class="space-y-3">';
+        if (reports.market) {
+            html += '<div class="p-3 bg-slate-800/30 rounded"><p class="text-xs text-slate-500 mb-1">市场分析</p>' + 
+                formatTextAsHtml(reports.market, {maxLength: 400, showToggle: true, className: 'text-sm leading-relaxed'}) + '</div>';
+        }
+        if (reports.news) {
+            html += '<div class="p-3 bg-slate-800/30 rounded"><p class="text-xs text-slate-500 mb-1">新闻分析</p>' + 
+                formatTextAsHtml(reports.news, {maxLength: 400, showToggle: true, className: 'text-sm leading-relaxed'}) + '</div>';
+        }
+        if (reports.fundamentals) {
+            html += '<div class="p-3 bg-slate-800/30 rounded"><p class="text-xs text-slate-500 mb-1">基本面分析</p>' + 
+                formatTextAsHtml(reports.fundamentals, {maxLength: 400, showToggle: true, className: 'text-sm leading-relaxed'}) + '</div>';
+        }
+        html += '</div>';
+        
+        content.innerHTML = html;
+    }
+
+    // Auto-load on page load
+    loadHistory();
+
+    // Modal close button
+    document.getElementById('btn-close-modal').addEventListener('click', function() {
+        document.getElementById('detail-modal').classList.add('hidden');
+    });
+
+    // Search button handler
+    document.getElementById('btn-search').addEventListener('click', function() {
+        historyOffset = 0;
+        loadHistory();
+    });
+    </script>
+</body>
+</html>

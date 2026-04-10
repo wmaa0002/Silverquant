@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据更新 - Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0f1419;
+            color: #e7e9ea;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: #1a1f25;
+            padding: 16px 24px;
+            border-bottom: 1px solid #2f3336;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .nav {
+            display: flex;
+            gap: 24px;
+        }
+        
+        .nav a {
+            color: #8b98a5;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+        
+        .nav a:hover, .nav a.active {
+            color: #1d9bf0;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+        
+        .card {
+            background: #1a1f25;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #2f3336;
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #e7e9ea;
+        }
+        
+        .refresh-btn {
+            background: #2f3336;
+            border: none;
+            color: #e7e9ea;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+        
+        .refresh-btn:hover {
+            background: #3f4346;
+        }
+        
+        .table-status {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .table-status th, .table-status td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #2f3336;
+            font-size: 13px;
+        }
+        
+        .table-status th {
+            color: #8b98a5;
+            font-weight: 500;
+        }
+        
+        .table-status tr:hover {
+            background: #1f2937;
+        }
+        
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-dot.has-data {
+            background: #00ba7c;
+        }
+        
+        .status-dot.no-data {
+            background: #f4212e;
+        }
+        
+        .status-count {
+            font-weight: 600;
+        }
+        
+        .status-count.high {
+            color: #00ba7c;
+        }
+        
+        .status-count.low {
+            color: #f59e0b;
+        }
+        
+        .status-count.empty {
+            color: #8b98a5;
+        }
+        
+        .form-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .form-group {
+            background: #252a30;
+            padding: 16px;
+            border-radius: 8px;
+        }
+        
+        .form-group h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #e7e9ea;
+        }
+        
+        .form-row {
+            margin-bottom: 12px;
+        }
+        
+        .form-row label {
+            display: block;
+            font-size: 12px;
+            color: #8b98a5;
+            margin-bottom: 6px;
+        }
+        
+        .form-row input, .form-row select {
+            width: 100%;
+            padding: 10px 12px;
+            background: #1a1f25;
+            border: 1px solid #2f3336;
+            border-radius: 6px;
+            color: #e7e9ea;
+            font-size: 13px;
+        }
+        
+        .form-row input:focus, .form-row select:focus {
+            outline: none;
+            border-color: #1d9bf0;
+        }
+        
+        .form-row .hint {
+            font-size: 11px;
+            color: #6e7681;
+            margin-top: 4px;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #1d9bf0;
+            color: #fff;
+        }
+        
+        .btn-primary:hover {
+            background: #1a8cd8;
+        }
+        
+        .btn-secondary {
+            background: #2f3336;
+            color: #e7e9ea;
+        }
+        
+        .btn-secondary:hover {
+            background: #3f4346;
+        }
+        
+        .btn-danger {
+            background: #f4212e;
+            color: #fff;
+        }
+        
+        .btn-danger:hover {
+            background: #dc1e2a;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .log-container {
+            background: #0d1117;
+            border-radius: 8px;
+            padding: 16px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            color: #8b949e;
+        }
+        
+        .log-line {
+            margin-bottom: 4px;
+        }
+        
+        .log-line.info {
+            color: #58a6ff;
+        }
+        
+        .log-line.warning {
+            color: #d29922;
+        }
+        
+        .log-line.error {
+            color: #f85149;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background: #2f3336;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #1d9bf0, #00ba7c);
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+        
+        .task-status {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: #252a30;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+        
+        .task-id {
+            font-family: monospace;
+            font-size: 12px;
+            color: #8b98a5;
+        }
+        
+        .task-message {
+            flex: 1;
+            font-size: 13px;
+        }
+        
+        .task-progress {
+            font-size: 12px;
+            color: #00ba7c;
+            font-weight: 600;
+        }
+        
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 16px 24px;
+            background: #1a1f25;
+            border: 1px solid #2f3336;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            animation: slideIn 0.3s ease;
+        }
+        
+        .toast.success {
+            border-color: #00ba7c;
+        }
+        
+        .toast.error {
+            border-color: #f4212e;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 1024px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: #1a1f25;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            color: #8b98a5;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .calendar-section {
+            margin-bottom: 20px;
+        }
+        .calendar-section h4 {
+            font-size: 14px;
+            color: #8b98a5;
+            margin-bottom: 8px;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+        .calendar-item {
+            background: #252a30;
+            padding: 8px 12px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        .calendar-item:hover {
+            background: #2f3336;
+        }
+        .calendar-period {
+            font-size: 13px;
+            color: #e7e9ea;
+        }
+        .calendar-count {
+            font-size: 12px;
+            color: #00ba7c;
+            font-weight: 600;
+        }
+        
+        /* 日历视图样式 */
+        .calendar-nav {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+        .cal-btn {
+            background: #2f3336;
+            border: none;
+            color: #e7e9ea;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        .cal-btn:hover {
+            background: #3f4346;
+        }
+        .calendar-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        .calendar-weekdays span {
+            font-size: 12px;
+            color: #8b98a5;
+            padding: 4px;
+        }
+        .calendar-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+        .calendar-day {
+            aspect-ratio: 1;
+            background: #252a30;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-height: 50px;
+        }
+        .calendar-day:hover {
+            transform: scale(1.05);
+        }
+        .calendar-day.has-data {
+            background: #00ba7c;
+        }
+        .calendar-day.has-data .calendar-day-num {
+            color: #fff;
+        }
+        .calendar-day.has-data .calendar-day-count {
+            color: rgba(255,255,255,0.8);
+        }
+        .calendar-day.no-data {
+            background: #252a30;
+        }
+        .calendar-day.no-data .calendar-day-num {
+            color: #8b98a5;
+        }
+        .calendar-day.no-data .calendar-day-count {
+            color: #6e7681;
+        }
+        .calendar-day.other-month {
+            opacity: 0.4;
+        }
+        .calendar-day-num {
+            font-size: 14px;
+            font-weight: 600;
+            color: #e7e9ea;
+        }
+        .calendar-day-count {
+            font-size: 10px;
+            color: #8b98a5;
+        }
+        
+        .source-switch {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .source-switch-label {
+            font-size: 14px;
+            color: #8b98a5;
+            min-width: 60px;
+        }
+
+        .source-switch-label.active {
+            color: #1d9bf0;
+            font-weight: 600;
+        }
+
+        .switch {
+            position: relative;
+            width: 56px;
+            height: 28px;
+            background: #2f3336;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 24px;
+            height: 24px;
+            background: #e7e9ea;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+
+        .switch.baostock {
+            background: #1d9bf0;
+        }
+
+        .switch.baostock::after {
+            transform: translateX(28px);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 数据更新中心</h1>
+        <nav class="nav">
+            <a href="/">持仓</a>
+            <a href="/agent">分析</a>
+            <a href="/multi-signal-resonance">信号</a>
+            <a href="/data-update" class="active">数据更新</a>
+        </nav>
+    </div>
+    
+    <div class="container">
+        <!-- 数据表状态 -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">📋 DWD层数据表状态</h2>
+                <button class="refresh-btn" onclick="loadStatus()">🔄 刷新状态</button>
+            </div>
+            <table class="table-status">
+                <thead>
+                    <tr>
+                        <th>表名</th>
+                        <th>说明</th>
+                        <th>记录数</th>
+                        <th>最新日期</th>
+                        <th>状态</th>
+                    </tr>
+                </thead>
+                <tbody id="tableStatus">
+                    <tr><td colspan="5" style="text-align:center;color:#8b98a5">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 更新操作 -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">⚡ 触发数据更新</h2>
+                <div class="source-switch">
+                    <span class="source-switch-label active" id="tushareLabel">Tushare</span>
+                    <div class="switch" id="sourceSwitch" onclick="toggleSource()"></div>
+                    <span class="source-switch-label" id="baostockLabel">Baostock</span>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <!-- 基础配置 -->
+                <div class="form-group">
+                    <h3>📅 日期范围配置</h3>
+                    <div class="form-row">
+                        <label>数据类型</label>
+                        <select id="dataType">
+                            <option value="daily">日线数据 (dwd_daily_price)</option>
+                            <option value="daily_parallel">日线数据-并行模式 (dwd_daily_price)</option>
+                            <option value="daily_basic">每日指标 (dwd_daily_basic)</option>
+                            <option value="adj_factor">复权因子 (dwd_adj_factor)</option>
+                            <option value="income">利润表 (dwd_income)</option>
+                            <option value="balancesheet">资产负债表 (dwd_balancesheet)</option>
+                            <option value="cashflow">现金流量表 (dwd_cashflow)</option>
+                            <option value="financial">财务数据-多进程 (三张财务表)</option>
+                            <option value="index">指数数据 (dwd_index_daily)</option>
+                            <option value="stock_info">股票信息 (dwd_stock_info)</option>
+                            <option value="trade_calendar">交易日历 (dwd_trade_calendar)</option>
+                            <option value="all">全量更新 (所有表)</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label>开始日期 (YYYYMMDD)</label>
+                        <input type="text" id="startDate" placeholder="20240101">
+                        <div class="hint">增量更新时自动从上次位置继续，可不填</div>
+                    </div>
+                    <div class="form-row">
+                        <label>结束日期 (YYYYMMDD)</label>
+                        <input type="text" id="endDate" placeholder="20260406">
+                        <div class="hint">默认今天，可不填</div>
+                    </div>
+                    <div class="form-row">
+                        <label>并行进程数</label>
+                        <input type="number" id="workers" value="4" min="1" max="8">
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="triggerUpdate()">🚀 开始更新</button>
+                        <button class="btn btn-secondary" onclick="loadStatus()">🔄 刷新状态</button>
+                    </div>
+                </div>
+                
+                <!-- 单独参数 -->
+                <div class="form-group">
+                    <h3>📌 单独参数配置</h3>
+                    <div class="form-row">
+                        <label>股票代码 (财务数据用)</label>
+                        <input type="text" id="tsCode" placeholder="600519.SH">
+                        <div class="hint">如: 600519.SH, 000001.SZ</div>
+                    </div>
+                    <div class="form-row">
+                        <label>指数代码</label>
+                        <select id="indexCode">
+                            <option value="000001.SH">上证指数 (000001.SH)</option>
+                            <option value="399001.SZ">深证成指 (399001.SZ)</option>
+                            <option value="399006.SZ">创业板指 (399006.SZ)</option>
+                            <option value="000300.SH">沪深300 (000300.SH)</option>
+                            <option value="000016.SH">上证50 (000016.SH)</option>
+                            <option value="000905.SH">中证500 (000905.SH)</option>
+                            <option value="000852.SH">中证1000 (000852.SH)</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label>默认指数列表 (全量更新时使用)</label>
+                        <div id="defaultIndices" style="font-size:12px;color:#8b98a5;margin-top:8px;">加载中...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 任务状态 -->
+        <div class="card" id="taskCard" style="display:none;">
+            <div class="card-header">
+                <h2 class="card-title">📊 更新任务状态</h2>
+            </div>
+            <div id="taskStatus"></div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width:0%"></div>
+            </div>
+        </div>
+        
+        <!-- 日志 -->
+        <div class="grid-2">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📜 更新日志</h2>
+                    <button class="refresh-btn" onclick="loadLog()">🔄 刷新日志</button>
+                </div>
+                <div class="log-container" id="logContainer">
+                    <div class="log-line">点击刷新获取日志...</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">💡 使用说明</h2>
+                </div>
+                <div style="font-size:13px;line-height:1.8;color:#8b98a5;">
+                    <p><strong>增量更新:</strong> 自动从上次更新到的日期继续，适合每日例行更新</p>
+                    <p><strong>全量更新:</strong> 从指定日期开始更新所有数据</p>
+                    <p><strong>并行模式:</strong> 使用多进程加速下载，但需注意API限流</p>
+                    <p style="margin-top:12px;"><strong>推荐流程:</strong></p>
+                    <ol style="margin-left:20px;">
+                        <li>首次: 选择 <code>全量更新</code> + <code>all</code></li>
+                        <li>日常: 选择 <code>增量更新</code> + <code>daily</code></li>
+                        <li>财务: 每季度报告发布后更新</li>
+                    </ol>
+                    <p style="margin-top:12px;color:#f59e0b;">⚠️ 全量更新耗时较长，建议在非交易时间执行</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="toast" class="toast" style="display:none;"></div>
+    
+    <div class="modal" id="calendarModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">表名</h3>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="calendar-section">
+                <h4>年度统计</h4>
+                <div class="calendar-grid" id="yearGrid"></div>
+            </div>
+            <div class="calendar-section">
+                <h4>月度统计</h4>
+                <div class="calendar-grid" id="monthGrid"></div>
+            </div>
+            <div class="calendar-section">
+                <h4>日历视图</h4>
+                <div class="calendar-nav">
+                    <button class="cal-btn" id="prevMonthBtn" onclick="changeMonth(-1)">◀</button>
+                    <span id="calendarMonthLabel">加载中...</span>
+                    <button class="cal-btn" id="nextMonthBtn" onclick="changeMonth(1)">▶</button>
+                </div>
+                <div class="calendar-weekdays">
+                    <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+                </div>
+                <div class="calendar-days" id="dayGrid"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentTaskId = null;
+        let pollInterval = null;
+        let currentSource = 'tushare';
+
+        function toggleSource() {
+            const switchEl = document.getElementById('sourceSwitch');
+            const tushareLabel = document.getElementById('tushareLabel');
+            const baostockLabel = document.getElementById('baostockLabel');
+            
+            if (currentSource === 'tushare') {
+                currentSource = 'baostock';
+                switchEl.classList.add('baostock');
+                tushareLabel.classList.remove('active');
+                baostockLabel.classList.add('active');
+            } else {
+                currentSource = 'tushare';
+                switchEl.classList.remove('baostock');
+                baostockLabel.classList.remove('active');
+                tushareLabel.classList.add('active');
+            }
+        }
+        
+        const tableNames = {
+            'dwd_daily_price': '日线行情',
+            'dwd_daily_basic': '每日指标',
+            'dwd_adj_factor': '复权因子',
+            'dwd_income': '利润表',
+            'dwd_balancesheet': '资产负债表',
+            'dwd_cashflow': '现金流量表',
+            'dwd_index_daily': '指数日线',
+            'dwd_stock_info': '股票基础信息',
+            'dwd_trade_calendar': '交易日历'
+        };
+        
+        async function loadStatus() {
+            try {
+                const resp = await fetch('/api/data-update/status');
+                const data = await resp.json();
+                
+                if (data.success) {
+                    renderStatus(data.data);
+                }
+            } catch (e) {
+                showToast('加载状态失败: ' + e.message, 'error');
+            }
+        }
+        
+        function renderStatus(tables) {
+            const tbody = document.getElementById('tableStatus');
+            let html = '';
+            
+            for (const [table, info] of Object.entries(tables)) {
+                const count = info.count || 0;
+                const latest = info.latest || '-';
+                const statusClass = count > 0 ? 'has-data' : 'no-data';
+                const countClass = count > 10000 ? 'high' : count > 0 ? 'low' : 'empty';
+                
+                html += `
+                    <tr>
+                        <td><a href="javascript:void(0)" onclick="openCalendar('${table}', '${tableNames[table] || table}')" style="color:#1d9bf0;text-decoration:none;cursor:pointer"><code>${table}</code></a></td>
+                        <td>${tableNames[table] || table}</td>
+                        <td class="status-count ${countClass}">${count.toLocaleString()}</td>
+                        <td>${latest}</td>
+                        <td><span class="status-dot ${statusClass}"></span>${count > 0 ? '有数据' : '空表'}</td>
+                    </tr>
+                `;
+            }
+            
+            tbody.innerHTML = html;
+        }
+        
+        async function triggerUpdate() {
+            const dataType = document.getElementById('dataType').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const tsCode = document.getElementById('tsCode').value;
+            const indexCode = document.getElementById('indexCode').value;
+            const workers = parseInt(document.getElementById('workers').value) || 4;
+            
+            const body = {
+                data_type: dataType,
+                workers: workers
+            };
+            
+            if (startDate) body.start_date = startDate;
+            if (endDate) body.end_date = endDate;
+            if (tsCode) body.ts_code = tsCode;
+            if (indexCode) body.index_code = indexCode;
+            body.source = currentSource;
+            
+            try {
+                const resp = await fetch('/api/data-update/update', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(body)
+                });
+                
+                const result = await resp.json();
+                
+                if (result.success) {
+                    currentTaskId = result.task_id;
+                    showTaskCard();
+                    startPolling();
+                    showToast('更新任务已启动: ' + result.message, 'success');
+                } else {
+                    showToast('启动失败: ' + result.error, 'error');
+                }
+            } catch (e) {
+                showToast('请求失败: ' + e.message, 'error');
+            }
+        }
+        
+        function showTaskCard() {
+            document.getElementById('taskCard').style.display = 'block';
+        }
+        
+        async function pollTask() {
+            if (!currentTaskId) return;
+            
+            try {
+                const resp = await fetch(`/api/data-update/task/${currentTaskId}`);
+                const data = await resp.json();
+                
+                if (data.success) {
+                    renderTaskStatus(data.data);
+                    
+                    if (data.data.status === 'completed' || data.data.status === 'error') {
+                        stopPolling();
+                        loadStatus();
+                        loadLog();
+                    }
+                }
+            } catch (e) {
+                console.error('Polling error:', e);
+            }
+        }
+        
+        function renderTaskStatus(task) {
+            const statusEl = document.getElementById('taskStatus');
+            const progressEl = document.getElementById('progressFill');
+            
+            statusEl.innerHTML = `
+                <div class="task-status">
+                    <span class="task-id">${currentTaskId}</span>
+                    <span class="task-message">${task.message || '-'}</span>
+                    <span class="task-progress">${task.progress || 0}%</span>
+                </div>
+            `;
+            
+            progressEl.style.width = (task.progress || 0) + '%';
+        }
+        
+        function startPolling() {
+            pollInterval = setInterval(pollTask, 2000);
+        }
+        
+        function stopPolling() {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+        }
+        
+        async function loadLog() {
+            try {
+                const resp = await fetch('/api/data-update/log?lines=50');
+                const data = await resp.json();
+                
+                if (data.success) {
+                    renderLog(data.log);
+                }
+            } catch (e) {
+                console.error('Load log error:', e);
+            }
+        }
+        
+        function renderLog(log) {
+            const container = document.getElementById('logContainer');
+            const lines = log.split('\n').slice(-50);
+            
+            container.innerHTML = lines.map(line => {
+                let cls = 'info';
+                if (line.includes('ERROR')) cls = 'error';
+                else if (line.includes('WARNING') || line.includes('失败')) cls = 'warning';
+                return `<div class="log-line ${cls}">${escapeHtml(line)}</div>`;
+            }).join('');
+            
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        async function loadDefaultIndices() {
+            try {
+                const resp = await fetch('/api/data-update/indices');
+                const data = await resp.json();
+                
+                if (data.success) {
+                    document.getElementById('defaultIndices').textContent = data.data.join(', ');
+                }
+            } catch (e) {
+                document.getElementById('defaultIndices').textContent = '加载失败';
+            }
+        }
+        
+        function showToast(message, type) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast ' + type;
+            toast.style.display = 'block';
+            
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 4000);
+        }
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStatus();
+            loadLog();
+            loadDefaultIndices();
+        });
+        
+        function openCalendar(tableName, tableDesc) {
+            document.getElementById('modalTitle').textContent = tableDesc + ' (' + tableName + ')';
+            document.getElementById('yearGrid').innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#8b98a5">加载中...</div>';
+            document.getElementById('monthGrid').innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#8b98a5">加载中...</div>';
+            document.getElementById('dayGrid').innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#8b98a5">加载中...</div>';
+            document.getElementById('calendarModal').classList.add('active');
+            
+            fetch('/api/data-update/calendar/' + tableName)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        renderCalendarGrid('yearGrid', data.data.year_stats.slice(0, 10));
+                        renderCalendarGrid('monthGrid', data.data.month_stats.slice(0, 12));
+                        // 初始化日历视图
+                        calendarData.year_stats = data.data.year_stats || [];
+                        calendarData.month_stats = data.data.month_stats || [];
+                        calendarData.day_stats = data.data.day_stats || [];
+                        if (calendarData.day_stats.length > 0) {
+                            const latestDate = calendarData.day_stats[0].period;
+                            calendarData.currentYear = parseInt(latestDate.substring(0, 4));
+                            calendarData.currentMonth = parseInt(latestDate.substring(5, 7));
+                        } else {
+                            const now = new Date();
+                            calendarData.currentYear = now.getFullYear();
+                            calendarData.currentMonth = now.getMonth() + 1;
+                        }
+                        renderCalendarMonthView();
+                    } else {
+                        document.getElementById('yearGrid').innerHTML = '错误: ' + data.error;
+                    }
+                });
+        }
+        
+        function renderCalendarGrid(containerId, items) {
+            const container = document.getElementById(containerId);
+            if (!items || items.length === 0) {
+                container.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#8b98a5;padding:20px">暂无数据</div>';
+                return;
+            }
+            container.innerHTML = items.map(item => 
+                '<div class="calendar-item" onclick="filterByPeriod(\'' + item.period + '\')">' +
+                    '<span class="calendar-period">' + item.period + '</span>' +
+                    '<span class="calendar-count">' + item.count.toLocaleString() + '条</span>' +
+                '</div>'
+            ).join('');
+        }
+        
+        let calendarData = { year_stats: [], month_stats: [], day_stats: [], currentYear: null, currentMonth: null };
+        
+        function changeMonth(delta) {
+            calendarData.currentMonth += delta;
+            if (calendarData.currentMonth > 12) {
+                calendarData.currentMonth = 1;
+                calendarData.currentYear++;
+            } else if (calendarData.currentMonth < 1) {
+                calendarData.currentMonth = 12;
+                calendarData.currentYear--;
+            }
+            renderCalendarMonthView();
+        }
+        
+        function formatDateStr(year, month, day) {
+            const m = month.toString().padStart(2, '0');
+            const d = day.toString().padStart(2, '0');
+            return year + '-' + m + '-' + d;
+        }
+        
+        function renderCalendarMonthView() {
+            const year = calendarData.currentYear;
+            const month = calendarData.currentMonth;
+            const label = document.getElementById('calendarMonthLabel');
+            if (label) label.textContent = year + '年' + month + '月';
+            
+            // 构建日期映射
+            const dayMap = {};
+            calendarData.day_stats.forEach(d => {
+                dayMap[d.period] = d.count;
+            });
+            
+            // 获取当月第一天和最后一天
+            const firstDay = new Date(year, month - 1, 1);
+            const lastDay = new Date(year, month, 0);
+            const daysInMonth = lastDay.getDate();
+            const startWeekday = firstDay.getDay();
+            
+            // 构建日历网格
+            let html = '';
+            
+            // 填充上月剩余天数
+            const prevMonthLastDay = new Date(year, month - 1, 0).getDate();
+            for (let i = startWeekday - 1; i >= 0; i--) {
+                const day = prevMonthLastDay - i;
+                const dateStr = formatDateStr(year, month - 1, day);
+                const count = dayMap[dateStr] || 0;
+                html += '<div class="calendar-day no-data other-month" onclick="showDayDetail(\'' + dateStr + '\')"><span class="calendar-day-num">' + day + '</span><span class="calendar-day-count">' + (count > 0 ? count + '条' : '-') + '</span></div>';
+            }
+            
+            // 当月天数
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = formatDateStr(year, month, day);
+                const count = dayMap[dateStr] || 0;
+                const hasData = count > 0;
+                html += '<div class="calendar-day ' + (hasData ? 'has-data' : 'no-data') + '" onclick="showDayDetail(\'' + dateStr + '\')"><span class="calendar-day-num">' + day + '</span><span class="calendar-day-count">' + (hasData ? count + '条' : '-') + '</span></div>';
+            }
+            
+            // 填充下月天数
+            const totalCells = startWeekday + daysInMonth;
+            const remainingDays = 42 - totalCells;
+            for (let day = 1; day <= remainingDays; day++) {
+                const dateStr = formatDateStr(year, month + 1, day);
+                const count = dayMap[dateStr] || 0;
+                html += '<div class="calendar-day no-data other-month" onclick="showDayDetail(\'' + dateStr + '\')"><span class="calendar-day-num">' + day + '</span><span class="calendar-day-count">' + (count > 0 ? count + '条' : '-') + '</span></div>';
+            }
+            
+            document.getElementById('dayGrid').innerHTML = html;
+        }
+        
+        function showDayDetail(dateStr) {
+            const count = calendarData.day_stats.find(d => d.period === dateStr);
+            alert('日期: ' + dateStr + '\n数据: ' + (count ? count.count : 0) + '条');
+        }
+        
+        function filterByPeriod(period) {
+            alert('筛选: ' + period);
+        }
+        
+        function closeModal() {
+            document.getElementById('calendarModal').classList.remove('active');
+        }
+    </script>
+</body>
+</html>

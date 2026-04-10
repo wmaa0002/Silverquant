@@ -1,0 +1,112 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - heading "📊 数据更新中心" [level=1] [ref=e3]
+    - navigation [ref=e4]:
+      - link "持仓" [ref=e5] [cursor=pointer]:
+        - /url: /
+      - link "分析" [ref=e6] [cursor=pointer]:
+        - /url: /agent
+      - link "信号" [ref=e7] [cursor=pointer]:
+        - /url: /multi-signal-resonance
+      - link "数据更新" [ref=e8] [cursor=pointer]:
+        - /url: /data-update
+  - generic [ref=e9]:
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - heading "📋 DWD层数据表状态" [level=2] [ref=e12]
+        - button "🔄 刷新状态" [ref=e13] [cursor=pointer]
+      - table [ref=e14]:
+        - rowgroup [ref=e15]:
+          - row "表名 说明 记录数 最新日期 状态" [ref=e16]:
+            - columnheader "表名" [ref=e17]
+            - columnheader "说明" [ref=e18]
+            - columnheader "记录数" [ref=e19]
+            - columnheader "最新日期" [ref=e20]
+            - columnheader "状态" [ref=e21]
+        - rowgroup [ref=e22]:
+          - row "加载中..." [ref=e23]:
+            - cell "加载中..." [ref=e24]
+    - generic [ref=e25]:
+      - heading "⚡ 触发数据更新" [level=2] [ref=e27]
+      - generic [ref=e28]:
+        - generic [ref=e29]:
+          - heading "📅 日期范围配置" [level=3] [ref=e30]
+          - generic [ref=e31]:
+            - generic [ref=e32]: 数据类型
+            - combobox [ref=e33]:
+              - option "日线数据 (dwd_daily_price)" [selected]
+              - option "日线数据-并行模式 (dwd_daily_price)"
+              - option "每日指标 (dwd_daily_basic)"
+              - option "复权因子 (dwd_adj_factor)"
+              - option "利润表 (dwd_income)"
+              - option "资产负债表 (dwd_balancesheet)"
+              - option "现金流量表 (dwd_cashflow)"
+              - option "财务数据-多进程 (三张财务表)"
+              - option "指数数据 (dwd_index_daily)"
+              - option "股票信息 (dwd_stock_info)"
+              - option "交易日历 (dwd_trade_calendar)"
+              - option "全量更新 (所有表)"
+          - generic [ref=e34]:
+            - generic [ref=e35]: 开始日期 (YYYYMMDD)
+            - textbox "20240101" [ref=e36]
+            - generic [ref=e37]: 增量更新时自动从上次位置继续，可不填
+          - generic [ref=e38]:
+            - generic [ref=e39]: 结束日期 (YYYYMMDD)
+            - textbox "20260406" [ref=e40]
+            - generic [ref=e41]: 默认今天，可不填
+          - generic [ref=e42]:
+            - generic [ref=e43]: 并行进程数
+            - spinbutton [ref=e44]: "4"
+          - generic [ref=e45]:
+            - button "🚀 开始更新" [ref=e46] [cursor=pointer]
+            - button "🔄 刷新状态" [ref=e47] [cursor=pointer]
+        - generic [ref=e48]:
+          - heading "📌 单独参数配置" [level=3] [ref=e49]
+          - generic [ref=e50]:
+            - generic [ref=e51]: 股票代码 (财务数据用)
+            - textbox "600519.SH" [ref=e52]
+            - generic [ref=e53]: "如: 600519.SH, 000001.SZ"
+          - generic [ref=e54]:
+            - generic [ref=e55]: 指数代码
+            - combobox [ref=e56]:
+              - option "上证指数 (000001.SH)" [selected]
+              - option "深证成指 (399001.SZ)"
+              - option "创业板指 (399006.SZ)"
+              - option "沪深300 (000300.SH)"
+              - option "上证50 (000016.SH)"
+              - option "中证500 (000905.SH)"
+              - option "中证1000 (000852.SH)"
+          - generic [ref=e57]:
+            - generic [ref=e58]: 默认指数列表 (全量更新时使用)
+            - generic [ref=e59]: 000001.SH, 399001.SZ, 399006.SZ, 000300.SH, 000016.SH, 000905.SH, 000852.SH
+    - generic [ref=e60]:
+      - generic [ref=e62]:
+        - heading "📜 更新日志" [level=2] [ref=e63]
+        - button "🔄 刷新日志" [ref=e64] [cursor=pointer]
+      - generic [ref=e66]:
+        - heading "💡 使用说明" [level=2] [ref=e68]
+        - generic [ref=e69]:
+          - paragraph [ref=e70]:
+            - strong [ref=e71]: "增量更新:"
+            - text: 自动从上次更新到的日期继续，适合每日例行更新
+          - paragraph [ref=e72]:
+            - strong [ref=e73]: "全量更新:"
+            - text: 从指定日期开始更新所有数据
+          - paragraph [ref=e74]:
+            - strong [ref=e75]: "并行模式:"
+            - text: 使用多进程加速下载，但需注意API限流
+          - paragraph [ref=e76]:
+            - strong [ref=e77]: "推荐流程:"
+          - list [ref=e78]:
+            - listitem [ref=e79]:
+              - text: "首次: 选择"
+              - code [ref=e80]: 全量更新
+              - text: +
+              - code [ref=e81]: all
+            - listitem [ref=e82]:
+              - text: "日常: 选择"
+              - code [ref=e83]: 增量更新
+              - text: +
+              - code [ref=e84]: daily
+            - listitem [ref=e85]: "财务: 每季度报告发布后更新"
+          - paragraph [ref=e86]: ⚠️ 全量更新耗时较长，建议在非交易时间执行

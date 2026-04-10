@@ -1,0 +1,13 @@
+usage: fetcher_daily_price_tushare.py [-h] --date DATE [--db DB]
+                                      [--max-stocks MAX_STOCKS] [--production]
+
+Tushare日线数据多进程下载
+
+options:
+  -h, --help            show this help message and exit
+  --date DATE           目标日期 (YYYYMMDD)
+  --db DB               数据库路径
+  --max-stocks MAX_STOCKS
+                        最大股票数量 (用于测试)
+  --production          写入production表
+                        (daily_price)，默认写入daily_price_tushare_test

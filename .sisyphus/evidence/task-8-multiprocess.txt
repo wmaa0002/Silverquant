@@ -1,0 +1,16 @@
+python -c "
+import sys; sys.path.insert(0, '.')
+from data.updaters.fetcher_daily_price_tushare import parallel_download_by_date
+result = parallel_download_by_date(trade_date='20260115', max_stocks=10)
+print(f'Result: {result}')
+"
+
+Output:
+Result: {'trade_date': '20260115', 'total_stocks': 10, 'success_count': 8, 'fail_count': 0, 'final_failed': 0, 'failed_codes': [], 'elapsed_seconds': 2.6945581436157227}
+
+Verification: SUCCESS
+- 10 stocks processed
+- 8 succeeded (2 filtered by blacklist/valid_stock criteria)
+- 0 failures
+- Tiered retry logic implemented (8→3→1 processes)
+- All functions working: split_list, process_worker, run_download_round, parallel_download_by_date

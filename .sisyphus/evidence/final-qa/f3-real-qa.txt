@@ -1,0 +1,56 @@
+# F3 Real Manual QA Evidence
+# Generated: Mon Apr 06 2026
+
+## Schema Check
+
+✓ dwd_* tables in schema.py: grep found 9 tables (expected >= 9) PASS
+  Command: grep -c "CREATE TABLE.*dwd_" database/schema.py
+  Result: 9
+
+✓ Views in schema.py: grep found 4 views (expected >= 4) PASS
+  Command: grep -c "CREATE VIEW" database/schema.py
+  Result: 4
+
+✓ Adapters exist: 8 files found (expected: 8) PASS
+  Command: ls data/fetchers/tushare_adapter/*.py
+  Files: __init__.py, adj_factor.py, base.py, daily_basic.py, daily.py, financial.py, index.py, trade_cal.py
+
+## Functional Check
+
+✓ DuckDB tables:
+  Command: duckdb (via python3)
+  dwd_* tables found: dwd_stock_info, dwd_trade_calendar (2 of 9 defined in schema)
+  
+  All tables in DB:
+  - adj_factor_tushare, agent_analysis_results, backtest_*, daily_*, dwd_*, factor_*, index_*, positions, stock_info, etc.
+  - Total: 33 tables
+
+✓ Views in DuckDB: Only DuckDB internal views found (expected: custom views like daily_price, daily_basic, index_daily, stock_info) FAIL
+  Note: Custom views not created in DuckDB
+
+✓ stock_info data:
+  Command: SELECT COUNT(*) FROM stock_info
+  Result: 5833 (expected >= 5000) PASS
+
+✓ trade_calendar data:
+  Command: SELECT COUNT(*) FROM dwd_trade_calendar
+  Result: 4576 (expected >= 1000) PASS
+
+## Summary
+
+Schema Definition: PASS
+- schema.py defines 9 dwd_ tables and 4 views
+
+DuckDB Implementation: PARTIAL
+- Only 2 dwd_ tables created (dwd_stock_info, dwd_trade_calendar)
+- Custom views not created
+
+Data Population: PASS
+- stock_info: 5833 records
+- trade_calendar: 4576 records
+
+## VERDICT: PARTIAL PASS
+
+Reason: Schema defines 9 dwd_* tables but only 2 exist in DuckDB.
+Custom views (daily_price, daily_basic, index_daily, stock_info) also not created.
+Data exists and counts are healthy.

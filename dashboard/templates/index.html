@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenClaw量化交易助手Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-blue: #3b82f6;
+            --border-color: #334155;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+        }
+        
+        .glass-card {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+        }
+        
+        .profit-positive {
+            color: #ef4444;
+        }
+        
+        .profit-negative {
+            color: #10b981;
+        }
+        
+        .profit-neutral {
+            color: #94a3b8;
+        }
+        
+        .signal-buy {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        }
+        
+        .signal-sell {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        }
+        
+        .table-row:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .nav-link.active {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.3) 0%, rgba(139, 92, 246, 0.3) 100%);
+            color: #60a5fa;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-6">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="glass-card px-6 py-4 mb-6 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">OpenClaw量化交易</h1>
+                    <p class="text-xs text-slate-400" id="updateTime">数据更新中...</p>
+                </div>
+            </div>
+            
+            <!-- Navigation -->
+            <nav class="flex items-center bg-slate-800/50 rounded-xl p-1 gap-1">
+                <a href="/" class="nav-link flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer hover:bg-slate-700/50" data-page="dashboard">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 001 1v4a1 1 0 001 1m-6 0h6"></path>
+                    </svg>
+                    首页
+                </a>
+                <a href="/multi-signal-resonance" class="nav-link flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer hover:bg-slate-700/50" data-page="multi-signal">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    多策略共振
+                </a>
+                <a href="/agent" class="nav-link flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer hover:bg-slate-700/50" data-page="agent">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                    </svg>
+                    多Agent分析
+                </a>
+                <a href="/data-update" class="nav-link flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer hover:bg-slate-700/50" data-page="data-update">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7V4c0-2.21 3.582-4 8-4s8 1.79 8 4v3"></path>
+                    </svg>
+                    数据更新
+                </a>
+            </nav>
+            
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 text-sm">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <span class="text-emerald-400 font-medium">实时</span>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="glass-card p-4 animate-fade-in" style="animation-delay: 0.1s">
+                <p class="text-slate-400 text-sm mb-1">持仓金额</p>
+                <p class="text-2xl font-bold" id="totalValue">--</p>
+            </div>
+            <div class="glass-card p-4 animate-fade-in" style="animation-delay: 0.2s">
+                <p class="text-slate-400 text-sm mb-1">可用资金</p>
+                <p class="text-2xl font-bold" id="availableCash">100,000</p>
+            </div>
+            <div class="glass-card p-4 animate-fade-in" style="animation-delay: 0.3s">
+                <p class="text-slate-400 text-sm mb-1">总盈亏</p>
+                <p class="text-2xl font-bold" id="totalProfit">--</p>
+            </div>
+            <div class="glass-card p-4 animate-fade-in" style="animation-delay: 0.4s">
+                <p class="text-slate-400 text-sm mb-1">今日信号</p>
+                <p class="text-2xl font-bold text-blue-400" id="todaySignals">--</p>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Equity Curve -->
+            <div class="lg:col-span-2 glass-card p-4 animate-fade-in" style="animation-delay: 0.5s">
+                <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
+                    </svg>
+                    收益曲线
+                </h2>
+                <div class="h-64">
+                    <canvas id="equityChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Today's Signals -->
+            <div class="glass-card p-4 animate-fade-in" style="animation-delay: 0.6s">
+                <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                    </svg>
+                    今日信号
+                    <span class="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded" id="signalDate"></span>
+                </h2>
+                <!-- Signal Tabs -->
+                <div class="flex gap-2 mb-3">
+                    <button id="btnBuySignals" onclick="switchSignals('buy')" class="flex-1 py-2 px-4 rounded-lg bg-red-500 text-white font-medium hover:bg-red-600 transition-colors">
+                        买入信号
+                    </button>
+                    <button id="btnSellSignals" onclick="switchSignals('sell')" class="flex-1 py-2 px-4 rounded-lg bg-green-500 text-white font-medium hover:bg-green-600 transition-colors">
+                        卖出信号
+                    </button>
+                </div>
+                <div id="signalsList" class="space-y-3 max-h-64 overflow-y-auto">
+                    <p class="text-black text-sm text-center py-4">暂无信号</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Strategy Comparison -->
+        <div class="glass-card p-4 mt-6 animate-fade-in" style="animation-delay: 0.65s">
+            <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+                策略收益对比
+            </h2>
+            <div class="h-64">
+                <canvas id="strategyChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Positions Table -->
+        <div class="glass-card p-4 mt-6 animate-fade-in" style="animation-delay: 0.7s">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold flex items-center gap-2">
+                    <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                    </svg>
+                    当前持仓
+                </h2>
+                <div class="flex gap-4">
+                    <div class="text-center">
+                        <p class="text-slate-400 text-xs">持仓盈亏</p>
+                        <p class="text-xl font-bold" id="positionProfit">--</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-slate-400 text-xs">持仓数量</p>
+                        <p class="text-xl font-bold" id="holdCount">--</p>
+                    </div>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-slate-400 text-sm border-b border-slate-700">
+                            <th class="text-left py-3 px-2 cursor-pointer hover:text-blue-400" onclick="toggleSort('name')">股票 <span class="sort-icon" data-field="name"></span></th>
+                            <th class="text-right py-3 px-2 cursor-pointer hover:text-blue-400" onclick="toggleSort('buy_price')">买入价 <span class="sort-icon" data-field="buy_price"></span></th>
+                            <th class="text-right py-3 px-2 cursor-pointer hover:text-blue-400" onclick="toggleSort('current_price')">现价 <span class="sort-icon" data-field="current_price"></span></th>
+                            <th class="text-right py-3 px-2 cursor-pointer hover:text-blue-400" onclick="toggleSort('shares')">数量 <span class="sort-icon" data-field="shares"></span></th>
+                            <th class="text-right py-3 px-2 cursor-pointer hover:text-blue-400" onclick="toggleSort('position_amount')">持仓金额 <span class="sort-icon" data-field="position_amount"></span></th>
+                            <th class="text-right py-3 px-2 cursor-pointer hover:text-blue-400" onclick="toggleSort('profit_loss')">盈亏 <span class="sort-icon" data-field="profit_loss"></span></th>
+                            <th class="text-right py-3 px-2 cursor-pointer hover:text-blue-400" onclick="toggleSort('profit_pct')">盈亏% <span class="sort-icon" data-field="profit_pct"></span></th>
+                            <th class="text-right py-3 px-2 cursor-pointer hover:text-blue-400" onclick="toggleSort('stop_loss_pct')">止损% <span class="sort-icon" data-field="stop_loss_pct"></span></th>
+                            <th class="text-left py-3 px-2 cursor-pointer hover:text-blue-400" onclick="toggleSort('buy_date')">买入日期 <span class="sort-icon" data-field="buy_date"></span></th>
+                            <th class="text-left py-3 px-2 w-40">买入原因</th>
+                        </tr>
+                    </thead>
+                    <tbody id="positionsTable">
+                        <tr>
+                            <td colspan="10" class="text-center py-8 text-slate-400">暂无持仓</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- History Trades -->
+        <div class="glass-card p-4 mt-6 animate-fade-in" style="animation-delay: 0.8s">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold flex items-center gap-2">
+                    <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    历史交易
+                </h2>
+                <div class="flex gap-4">
+                    <div class="text-center">
+                        <p class="text-slate-400 text-xs">交易次数</p>
+                        <p class="text-xl font-bold" id="totalTrades">--</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-slate-400 text-xs">总盈亏</p>
+                        <p class="text-xl font-bold" id="historyProfit">--</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-slate-400 text-xs">胜率</p>
+                        <p class="text-xl font-bold" id="winRate">--</p>
+                    </div>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-slate-400 text-sm border-b border-slate-700">
+                            <th class="text-left py-3 px-2">股票</th>
+                            <th class="text-left py-3 px-2">买入日期</th>
+                            <th class="text-right py-3 px-2">买入价</th>
+                            <th class="text-left py-3 px-2">卖出日期</th>
+                            <th class="text-right py-3 px-2">卖出价</th>
+                            <th class="text-left py-3 px-2">卖出原因</th>
+                            <th class="text-right py-3 px-2">盈亏</th>
+                            <th class="text-right py-3 px-2">盈亏%</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTable">
+                        <tr>
+                            <td colspan="8" class="text-center py-8 text-slate-400">暂无历史交易</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let equityChart = null;
+        let strategyChart = null;
+        let allSignals = [];
+        let currentSignalType = 'buy';
+        
+        // 持仓表格排序状态
+        let positionsData = [];
+        let currentSortField = 'buy_date';
+        let currentSortOrder = 'desc';
+        
+        async function fetchAPI(url) {
+            const response = await fetch(url);
+            return response.json();
+        }
+        
+        async function loadStats() {
+            try {
+                const stats = await fetchAPI('/api/stats');
+                document.getElementById('todaySignals').textContent = stats.today_buy_signals || 0;
+                document.getElementById('updateTime').textContent = `数据日期: ${stats.latest_date || '--'}`;
+            } catch (e) {
+                console.error('Failed to load stats:', e);
+            }
+        }
+        
+        async function loadPositions() {
+            try {
+                const data = await fetchAPI('/api/positions');
+                
+                // 顶部卡片
+                document.getElementById('totalValue').textContent = formatMoney(data.summary.total_value);
+                document.getElementById('availableCash').textContent = formatMoney(data.summary.available_cash);
+                document.getElementById('totalProfit').textContent = formatMoney(data.summary.total_profit);
+                document.getElementById('totalProfit').className = `text-2xl font-bold ${data.summary.total_profit >= 0 ? 'profit-positive' : 'profit-negative'}`;
+                
+                // 当前持仓模块的卡片
+                const positionProfitEl = document.getElementById('positionProfit');
+                positionProfitEl.textContent = formatMoney(data.summary.total_profit);
+                positionProfitEl.className = `text-xl font-bold ${data.summary.total_profit >= 0 ? 'profit-positive' : (data.summary.total_profit < 0 ? 'profit-negative' : 'profit-neutral')}`;
+                document.getElementById('holdCount').textContent = data.summary.count;
+                
+                // 存储数据并渲染
+                positionsData = data.positions || [];
+                renderPositions(positionsData);
+            } catch (e) {
+                console.error('Failed to load positions:', e);
+            }
+        }
+        
+        function renderPositions(positions) {
+            const tbody = document.getElementById('positionsTable');
+            if (positions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center py-8 text-slate-400">暂无持仓</td></tr>';
+                return;
+            }
+            
+            // 排序
+            const sorted = [...positions].sort((a, b) => {
+                let aVal = a[currentSortField];
+                let bVal = b[currentSortField];
+                
+                // 处理 null/undefined，排在最后
+                if (aVal == null) return 1;
+                if (bVal == null) return -1;
+                
+                // 数字和字符串处理
+                if (typeof aVal === 'number' && typeof bVal === 'number') {
+                    return currentSortOrder === 'asc' ? aVal - bVal : bVal - aVal;
+                }
+                
+                // 字符串比较
+                const aStr = String(aVal).toLowerCase();
+                const bStr = String(bVal).toLowerCase();
+                if (currentSortOrder === 'asc') {
+                    return aStr.localeCompare(bStr);
+                } else {
+                    return bStr.localeCompare(aStr);
+                }
+            });
+            
+            tbody.innerHTML = sorted.map(p => {
+                const getProfitClass = (val) => {
+                    if (val === null || val === undefined || val === 0) return 'profit-neutral';
+                    return val > 0 ? 'profit-positive' : 'profit-negative';
+                };
+                return `
+                <tr class="table-row border-b border-slate-800">
+                    <td class="py-3 px-2">
+                        <div class="flex items-center gap-2">
+                            <span class="font-medium">${p.name}</span>
+                            <span class="text-slate-500 text-sm">${p.code}</span>
+                        </div>
+                        <span class="text-xs text-slate-500">${p.strategy || ''}</span>
+                    </td>
+                    <td class="text-right py-3 px-2">${p.buy_price ? p.buy_price.toFixed(2) : '--'}</td>
+                    <td class="text-right py-3 px-2">${p.current_price ? p.current_price.toFixed(2) : '--'}</td>
+                    <td class="text-right py-3 px-2">${p.shares || 0}</td>
+                    <td class="text-right py-3 px-2 text-blue-400">${p.position_amount !== null && p.position_amount !== undefined ? formatMoney(p.position_amount) : '--'}</td>
+                    <td class="text-right py-3 px-2 ${getProfitClass(p.profit_loss)}">${p.profit_loss !== null && p.profit_loss !== undefined ? formatMoney(p.profit_loss) : '--'}</td>
+                    <td class="text-right py-3 px-2 ${getProfitClass(p.profit_pct)}">${p.profit_pct !== null && p.profit_pct !== undefined ? p.profit_pct.toFixed(2) + '%' : '--'}</td>
+                    <td class="text-right py-3 px-2 text-slate-400">${(p.stop_loss_pct * 100).toFixed(0)}%</td>
+                    <td class="text-left py-3 px-2 text-slate-400">${p.buy_date || '--'}</td>
+                    <td class="text-left py-3 px-2 text-slate-400 whitespace-normal w-40">${p.notes || '--'}</td>
+                </tr>
+            `}).join('');
+            
+            updateSortIcons();
+        }
+        
+        function toggleSort(field) {
+            if (currentSortField === field) {
+                currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortField = field;
+                currentSortOrder = 'desc';
+            }
+            renderPositions(positionsData);
+        }
+        
+        function updateSortIcons() {
+            document.querySelectorAll('.sort-icon').forEach(icon => {
+                const field = icon.dataset.field;
+                if (field === currentSortField) {
+                    icon.textContent = currentSortOrder === 'asc' ? ' ↑' : ' ↓';
+                } else {
+                    icon.textContent = '';
+                }
+            });
+        }
+        
+        async function loadSignals() {
+            try {
+                const data = await fetchAPI('/api/signals');
+                document.getElementById('signalDate').textContent = data.date || '';
+                allSignals = data.signals || [];
+                renderSignals();
+            } catch (e) {
+                console.error('Failed to load signals:', e);
+            }
+        }
+        
+        function switchSignals(type) {
+            currentSignalType = type;
+            renderSignals();
+        }
+        
+        function renderSignals() {
+            const container = document.getElementById('signalsList');
+            
+            const filtered = allSignals.filter(s => {
+                if (currentSignalType === 'buy') {
+                    return s.signal_buy_b1 || s.signal_buy_b2;
+                } else {
+                    return s.signal_s1_full || s.signal_s1_half || s.signal_跌破多空线 || s.signal_止损;
+                }
+            });
+            
+            if (filtered.length === 0) {
+                container.innerHTML = '<p class="text-black text-sm text-center py-4">暂无信号</p>';
+                return;
+            }
+            
+            container.innerHTML = filtered.map(s => {
+                const isBuy = s.signal_buy_b1 || s.signal_buy_b2;
+                const bgClass = isBuy ? 'signal-buy' : 'signal-sell';
+                const label = isBuy ? '买入' : '卖出';
+                const score = isBuy ? (s.score_b1 || s.score_b2 || 0) : (s.score_s1 || 0);
+                
+                return `
+                    <div class="p-3 rounded-lg ${bgClass} bg-opacity-30 border border-opacity-30">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="font-medium text-black">${s.name}</div>
+                                <div class="text-sm text-gray-600">${s.code}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-lg font-bold ${isBuy ? 'text-red-700' : 'text-green-700'}">${score.toFixed(1)}分</div>
+                                <div class="text-xs ${isBuy ? 'text-red-600' : 'text-green-600'}">${label}</div>
+                            </div>
+                        </div>
+                        <div class="mt-2 flex justify-between text-sm text-gray-600">
+                            <span>现价: ${s.close?.toFixed(2) || '--'}</span>
+                            <span>涨跌: <span class="${s.change_pct >= 0 ? 'text-red-700' : 'text-green-700'}">${s.change_pct?.toFixed(2) || '0.00'}%</span></span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        async function loadEquityCurve() {
+            try {
+                const data = await fetchAPI('/api/equity-curve');
+                
+                const ctx = document.getElementById('equityChart').getContext('2d');
+                
+                if (equityChart) {
+                    equityChart.destroy();
+                }
+                
+                // ========== 构建标注 ==========
+                const annotations = {};
+                
+                if (data.annotations) {
+                    // 峰值标注 (绿色)
+                    if (data.annotations.peak) {
+                        const peakIdx = data.dates.indexOf(data.annotations.peak.date);
+                        if (peakIdx !== -1) {
+                            annotations.peakLine = {
+                                type: 'line',
+                                xMin: peakIdx,
+                                xMax: peakIdx,
+                                borderColor: '#10b981',
+                                borderWidth: 2,
+                                borderDash: [6, 6],
+                                label: {
+                                    display: true,
+                                    content: '峰值: +' + data.annotations.peak.return_pct.toFixed(2) + '%',
+                                    position: 'start',
+                                    backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                                    color: '#ffffff',
+                                    font: { size: 12 }
+                                }
+                            };
+                        }
+                    }
+                    
+                    // 最大回撤标注 (红色)
+                    if (data.annotations.max_drawdown && data.annotations.max_drawdown.date) {
+                        const ddIdx = data.dates.indexOf(data.annotations.max_drawdown.date);
+                        if (ddIdx !== -1) {
+                            annotations.maxDdLine = {
+                                type: 'line',
+                                xMin: ddIdx,
+                                xMax: ddIdx,
+                                borderColor: '#ef4444',
+                                borderWidth: 2,
+                                borderDash: [6, 6],
+                                label: {
+                                    display: true,
+                                    content: '最大回撤: -' + data.annotations.max_drawdown.pct.toFixed(2) + '%',
+                                    position: 'end',
+                                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                                    color: '#ffffff',
+                                    font: { size: 12 }
+                                }
+                            };
+                        }
+                    }
+                }
+                
+                equityChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.dates,
+                        datasets: [
+                            {
+                                label: '策略收益',
+                                data: data.values,
+                                borderColor: '#3b82f6',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                fill: true,
+                                tension: 0.4,
+                                pointRadius: 0,
+                                borderWidth: 2
+                            },
+                            {
+                                label: '基准',
+                                data: data.benchmark,
+                                borderColor: '#64748b',
+                                borderDash: [5, 5],
+                                fill: false,
+                                tension: 0,
+                                pointRadius: 0,
+                                borderWidth: 1
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                labels: {
+                                    color: '#94a3b8'
+                                }
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                backgroundColor: '#1e293b',
+                                titleColor: '#f1f5f9',
+                                bodyColor: '#94a3b8',
+                                borderColor: '#334155',
+                                borderWidth: 1,
+                                callbacks: {
+                                    label: function(context) {
+                                        var label = context.label || '';
+                                        var formattedValue = context.formattedValue || '';
+                                        var index = context.dataIndex;
+                                        var positionPnl = data.position_pnl[index] || 0;
+                                        var closedPnl = data.closed_pnl[index] || 0;
+                                        var posRatio = data.position_ratio[index] || 0;
+                                        var availCash = data.available_cash[index] || 0;
+                                        var totalPnl = data.total_pnl[index] || 0;
+                                        
+                                        // Color coding: positive=#10b981, negative=#ef4444, zero=#94a3b8
+                                        var colorFor = function(val) {
+                                            if (val > 0) return '#10b981';
+                                            if (val < 0) return '#ef4444';
+                                            return '#94a3b8';
+                                        };
+                                        
+                                        // QA logging
+                                        console.log('TOOLTIP_DATA:', label, formattedValue, positionPnl, closedPnl, posRatio, availCash, totalPnl);
+                                        
+                                        return [
+                                            '日期: ' + label,
+                                            '总资产: ' + formattedValue + ' 万元',
+                                            '持仓盈亏: ' + positionPnl + ' (' + colorFor(positionPnl) + ')',
+                                            '已卖盈亏: ' + closedPnl + ' (' + colorFor(closedPnl) + ')',
+                                            '仓位比例: ' + (posRatio * 100).toFixed(2) + '%',
+                                            '可用资金: ' + availCash + ' 万元',
+                                            '总盈亏: ' + totalPnl + ' (' + colorFor(totalPnl) + ')'
+                                        ];
+                                    }
+                                }
+                            },
+                            annotation: {
+                                annotations: annotations
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: {
+                                    color: 'rgba(51, 65, 85, 0.5)'
+                                },
+                                ticks: {
+                                    color: '#64748b',
+                                    maxTicksLimit: 8
+                                }
+                            },
+                            y: {
+                                grid: {
+                                    color: 'rgba(51, 65, 85, 0.5)'
+                                },
+                                ticks: {
+                                    color: '#64748b',
+                                    callback: function(value) {
+                                        return (value / 10000).toFixed(1) + '万';
+                                    }
+                                }
+                            }
+                        },
+                        interaction: {
+                            mode: 'nearest',
+                            axis: 'x',
+                            intersect: false
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error('Failed to load equity curve:', e);
+            }
+        }
+        
+        async function loadStrategyComparison() {
+            try {
+                const data = await fetchAPI('/api/strategy-comparison');
+                
+                if (!data.strategies || data.strategies.length === 0) {
+                    return;
+                }
+                
+                const ctx = document.getElementById('strategyChart').getContext('2d');
+                
+                if (strategyChart) {
+                    strategyChart.destroy();
+                }
+                
+                // 预定义渐变色
+                const gradientColors = [
+                    { start: 'rgba(59, 130, 246, 0.4)', end: 'rgba(59, 130, 246, 0.0)' },
+                    { start: 'rgba(16, 185, 129, 0.4)', end: 'rgba(16, 185, 129, 0.0)' },
+                    { start: 'rgba(245, 158, 11, 0.4)', end: 'rgba(245, 158, 11, 0.0)' },
+                    { start: 'rgba(239, 68, 68, 0.4)', end: 'rgba(239, 68, 68, 0.0)' },
+                    { start: 'rgba(139, 92, 246, 0.4)', end: 'rgba(139, 92, 246, 0.0)' },
+                    { start: 'rgba(236, 72, 153, 0.4)', end: 'rgba(236, 72, 153, 0.0)' }
+                ];
+                
+                const datasets = data.strategies.map((name, idx) => {
+                    const color = data.curves[name].color;
+                    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+                    gradient.addColorStop(0, gradientColors[idx % gradientColors.length].start);
+                    gradient.addColorStop(1, gradientColors[idx % gradientColors.length].end);
+                    
+                    return {
+                        label: name,
+                        data: data.curves[name].data,
+                        borderColor: color,
+                        backgroundColor: gradient,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointHoverRadius: 8,
+                        pointBackgroundColor: color,
+                        pointBorderColor: '#1e293b',
+                        pointBorderWidth: 2,
+                        borderWidth: 3,
+                        shadowOffsetX: 0,
+                        shadowOffsetY: 4,
+                        shadowBlur: 10,
+                        shadowColor: color + '40'
+                    };
+                });
+                
+                strategyChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.dates,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                align: 'end',
+                                labels: {
+                                    color: '#94a3b8',
+                                    usePointStyle: true,
+                                    pointStyle: 'circle',
+                                    padding: 20,
+                                    font: {
+                                        size: 12,
+                                        family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto'
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                enabled: true,
+                                mode: 'index',
+                                intersect: false,
+                                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                titleColor: '#f1f5f9',
+                                bodyColor: '#94a3b8',
+                                borderColor: 'rgba(59, 130, 246, 0.3)',
+                                borderWidth: 1,
+                                cornerRadius: 8,
+                                padding: 12,
+                                displayColors: true,
+                                callbacks: {
+                                    label: function(context) {
+                                        const value = context.raw;
+                                        const change = ((value - data.initial_value) / data.initial_value * 100).toFixed(2);
+                                        const sign = change >= 0 ? '+' : '';
+                                        return `${context.dataset.label}: ${sign}${change}%`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: {
+                                    color: 'rgba(51, 65, 85, 0.3)',
+                                    drawBorder: false
+                                },
+                                ticks: {
+                                    color: '#64748b',
+                                    maxTicksLimit: 8,
+                                    font: {
+                                        size: 11
+                                    }
+                                }
+                            },
+                            y: {
+                                grid: {
+                                    color: 'rgba(51, 65, 85, 0.3)',
+                                    drawBorder: false
+                                },
+                                ticks: {
+                                    color: '#64748b',
+                                    callback: function(value) {
+                                        return (value / 10000).toFixed(1) + '万';
+                                    },
+                                    font: {
+                                        size: 11
+                                    }
+                                }
+                            }
+                        },
+                        animation: {
+                            duration: 1500,
+                            easing: 'easeOutQuart'
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error('Failed to load strategy comparison:', e);
+            }
+        }
+        
+        async function loadHistory() {
+            try {
+                const data = await fetchAPI('/api/history');
+                
+                // 更新统计卡片
+                document.getElementById('totalTrades').textContent = data.summary.total_trades || 0;
+                
+                const profitEl = document.getElementById('historyProfit');
+                profitEl.textContent = formatMoney(data.summary.total_profit);
+                profitEl.className = `text-xl font-bold ${data.summary.total_profit > 0 ? 'profit-positive' : (data.summary.total_profit < 0 ? 'profit-negative' : 'profit-neutral')}`;
+                
+                document.getElementById('winRate').textContent = (data.summary.win_rate || 0) + '%';
+                
+                const tbody = document.getElementById('historyTable');
+                if (!data.history || data.history.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-slate-400">暂无历史交易</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = data.history.map(h => {
+                    const getProfitClass = (val) => {
+                        if (val === null || val === undefined || val === 0) return 'profit-neutral';
+                        return val > 0 ? 'profit-positive' : 'profit-negative';
+                    };
+                    return `
+                    <tr class="table-row border-b border-slate-800">
+                        <td class="py-3 px-2">
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium">${h.name || '--'}</span>
+                                <span class="text-slate-500 text-sm">${h.code || ''}</span>
+                            </div>
+                        </td>
+                        <td class="text-left py-3 px-2 text-slate-400">${h.buy_date || '--'}</td>
+                        <td class="text-right py-3 px-2">${h.buy_price ? h.buy_price.toFixed(2) : '--'}</td>
+                        <td class="text-left py-3 px-2 text-slate-400">${h.sell_date || '--'}</td>
+                        <td class="text-right py-3 px-2">${h.sell_price ? h.sell_price.toFixed(2) : '--'}</td>
+                        <td class="text-left py-3 px-2 text-slate-400">${h.sell_reason || '--'}</td>
+                        <td class="text-right py-3 px-2 ${getProfitClass(h.profit_loss)}">${h.profit_loss !== null && h.profit_loss !== undefined ? formatMoney(h.profit_loss) : '--'}</td>
+                        <td class="text-right py-3 px-2 ${getProfitClass(h.profit_pct)}">${h.profit_pct !== null && h.profit_pct !== undefined ? h.profit_pct.toFixed(2) + '%' : '--'}</td>
+                    </tr>
+                `}).join('');
+            } catch (e) {
+                console.error('Failed to load history:', e);
+            }
+        }
+        
+        function formatMoney(value) {
+            if (value === null || value === undefined) return '--';
+            const absValue = Math.abs(value);
+            if (absValue >= 10000) {
+                return (value >= 0 ? '+' : '') + (value / 10000).toFixed(2) + '万';
+            }
+            return (value >= 0 ? '+' : '') + value.toFixed(2);
+        }
+        
+        async function loadAll() {
+            await Promise.all([
+                loadStats(),
+                loadPositions(),
+                loadSignals(),
+                loadEquityCurve(),
+                loadStrategyComparison(),
+                loadHistory()
+            ]);
+        }
+        
+        loadAll();
+        
+        setInterval(loadAll, 60000);
+        
+        // Highlight current nav item
+        (function() {
+            const path = window.location.pathname;
+            document.querySelectorAll('.nav-link').forEach(link => {
+                if (link.getAttribute('href') === path) {
+                    link.classList.add('active');
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多策略共振</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+        }
+        
+        .glass-card {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            border-radius: 12px;
+        }
+        
+        .signal-tag {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .signal-tag.B1 { background: rgba(59, 130, 246, 0.3); color: #60a5fa; }
+        .signal-tag.B2 { background: rgba(16, 185, 129, 0.3); color: #34d399; }
+        .signal-tag.BLK { background: rgba(249, 115, 22, 0.3); color: #fb923c; }
+        .signal-tag.DL { background: rgba(139, 92, 246, 0.3); color: #a78bfa; }
+        .signal-tag.DZ30 { background: rgba(6, 182, 212, 0.3); color: #22d3ee; }
+        .signal-tag.SCB { background: rgba(236, 72, 153, 0.3); color: #f472b6; }
+        .signal-tag.BLKB2 { background: rgba(132, 204, 22, 0.3); color: #a3e635; }
+        
+        .stock-code { font-weight: 600; color: #f1f5f9; }
+        .stock-name { color: #94a3b8; }
+        
+        .change-up { color: #ef4444; }
+        .change-down { color: #10b981; }
+        .change-zero { color: #94a3b8; }
+        
+        .nav-link {
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            color: #94a3b8;
+        }
+        .nav-link:hover { background: rgba(51, 65, 85, 0.5); color: #f1f5f9; }
+        .nav-link.active {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.3) 0%, rgba(139, 92, 246, 0.3) 100%);
+            color: #60a5fa;
+        }
+        
+        .loading { text-align: center; padding: 40px; color: #94a3b8; }
+        
+        .table-row:hover { background: rgba(59, 130, 246, 0.1); }
+    </style>
+</head>
+<body class="p-4 md:p-6">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="glass-card px-6 py-4 mb-6 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">OpenClaw量化交易</h1>
+                    <p class="text-xs text-slate-400">多策略共振</p>
+                </div>
+            </div>
+            
+            <!-- Navigation -->
+            <nav class="flex items-center gap-1">
+                <a href="/" class="nav-link" data-page="dashboard">首页</a>
+                <a href="/multi-signal-resonance" class="nav-link active" data-page="multi-signal">多策略共振</a>
+                <a href="/agent" class="nav-link" data-page="agent">多Agent分析</a>
+            </nav>
+            
+            <div class="flex items-center gap-2">
+                <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span class="text-emerald-400 text-sm font-medium">实时</span>
+            </div>
+        </header>
+        
+        <!-- Filter -->
+        <div class="glass-card p-4 mb-6 flex items-center gap-4">
+            <label class="text-slate-400 font-medium">选择日期:</label>
+            <select id="dateSelect" onchange="loadData()" class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-slate-200 focus:outline-none focus:border-blue-500">
+            </select>
+        </div>
+        
+        <!-- Stats -->
+        <div class="grid grid-cols-3 gap-4 mb-6">
+            <div class="glass-card p-4 text-center">
+                <p class="text-3xl font-bold text-blue-400" id="stockCount">-</p>
+                <p class="text-sm text-slate-400 mt-1">共振股票数</p>
+            </div>
+            <div class="glass-card p-4 text-center">
+                <p class="text-3xl font-bold text-emerald-400" id="totalSignals">-</p>
+                <p class="text-sm text-slate-400 mt-1">总信号数</p>
+            </div>
+            <div class="glass-card p-4 text-center">
+                <p class="text-3xl font-bold text-purple-400" id="selectedDate">-</p>
+                <p class="text-sm text-slate-400 mt-1">当前日期</p>
+            </div>
+        </div>
+        
+        <!-- Trend Chart -->
+        <div class="glass-card p-4 mb-6">
+            <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
+                </svg>
+                共振趋势
+            </h2>
+            <div class="h-80">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Table -->
+        <div class="glass-card overflow-hidden">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-slate-700">
+                        <th class="text-left py-3 px-4 text-slate-400 font-medium text-sm">代码</th>
+                        <th class="text-left py-3 px-4 text-slate-400 font-medium text-sm">名称</th>
+                        <th class="text-center py-3 px-4 text-slate-400 font-medium text-sm">信号数</th>
+                        <th class="text-left py-3 px-4 text-slate-400 font-medium text-sm">信号列表</th>
+                        <th class="text-right py-3 px-4 text-slate-400 font-medium text-sm">收盘价</th>
+                        <th class="text-right py-3 px-4 text-slate-400 font-medium text-sm">涨跌幅</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr>
+                        <td colspan="6" class="loading">加载中...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script>
+        const defaultDate = "{{ default_date }}";
+        const dateOptions = {{ date_options | tojson | safe }};
+        
+        function init() {
+            const select = document.getElementById('dateSelect');
+            dateOptions.forEach(d => {
+                const option = document.createElement('option');
+                option.value = d.value;
+                option.textContent = d.label;
+                if (d.value === defaultDate) option.selected = true;
+                select.appendChild(option);
+            });
+            
+            // Highlight current nav
+            const path = window.location.pathname;
+            document.querySelectorAll('.nav-link').forEach(link => {
+                if (link.getAttribute('href') === path) {
+                    link.classList.add('active');
+                }
+            });
+            
+            loadData();
+        }
+        
+        function loadData() {
+            const date = document.getElementById('dateSelect').value;
+            fetch('/api/multi-signal-resonance?date=' + date)
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('stockCount').textContent = data.count;
+                    document.getElementById('totalSignals').textContent = data.stocks.reduce((s, st) => s + st.signal_count, 0);
+                    document.getElementById('selectedDate').textContent = data.date;
+                    
+                    const tbody = document.getElementById('tableBody');
+                    if (data.stocks.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" class="loading">暂无数据</td></tr>';
+                        return;
+                    }
+                    tbody.innerHTML = data.stocks.map(st => {
+                        const changeClass = st.change_pct > 0 ? 'change-up' : (st.change_pct < 0 ? 'change-down' : 'change-zero');
+                        return '<tr class="table-row border-b border-slate-800">' +
+                            '<td class="py-3 px-4 stock-code">' + st.code + '</td>' +
+                            '<td class="py-3 px-4 stock-name">' + st.name + '</td>' +
+                            '<td class="py-3 px-4 text-center"><strong>' + st.signal_count + '</strong></td>' +
+                            '<td class="py-3 px-4"><div class="flex gap-1 flex-wrap">' + st.signals.map(s => '<span class="signal-tag ' + s + '">' + s + '</span>').join('') + '</div></td>' +
+                            '<td class="py-3 px-4 text-right">' + st.close.toFixed(2) + '</td>' +
+                            '<td class="py-3 px-4 text-right ' + changeClass + '">' + (st.change_pct >= 0 ? '+' : '') + st.change_pct.toFixed(2) + '%</td>' +
+                        '</tr>';
+                    }).join('');
+                })
+                .catch(err => {
+                    console.error(err);
+                    document.getElementById('tableBody').innerHTML = '<tr><td colspan="6" class="loading" style="color:#ef4444">加载失败</td></tr>';
+                });
+        }
+        
+        init();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let trendChart = null;
+        
+        function loadTrendChart() {
+            fetch('/api/multi-signal-trend')
+                .then(r => r.json())
+                .then(data => {
+                    const ctx = document.getElementById('trendChart').getContext('2d');
+                    
+                    if (trendChart) {
+                        trendChart.destroy();
+                    }
+                    
+                    const signalColors = {
+                        'B1': '#60a5fa',
+                        'B2': '#34d399',
+                        'BLK': '#fb923c',
+                        'DL': '#a78bfa',
+                        'DZ30': '#22d3ee',
+                        'SCB': '#f472b6',
+                        'BLKB2': '#a3e635'
+                    };
+                    
+                    const datasets = [
+                        {
+                            label: '共振股票总数',
+                            data: data.total_counts,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 3,
+                            borderWidth: 2,
+                            yAxisID: 'y'
+                        }
+                    ];
+                    
+                    Object.keys(data.signal_data).forEach(signal => {
+                        datasets.push({
+                            label: signal,
+                            data: data.signal_data[signal],
+                            borderColor: signalColors[signal],
+                            backgroundColor: signalColors[signal] + '20',
+                            fill: false,
+                            tension: 0.3,
+                            pointRadius: 2,
+                            borderWidth: 1.5,
+                            yAxisID: 'y1'
+                        });
+                    });
+                    
+                    trendChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: data.dates,
+                            datasets: datasets
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: {
+                                mode: 'index',
+                                intersect: false
+                            },
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'top',
+                                    labels: {
+                                        color: '#94a3b8',
+                                        usePointStyle: true,
+                                        pointStyle: 'circle',
+                                        padding: 15,
+                                        font: { size: 11 }
+                                    }
+                                },
+                                tooltip: {
+                                    backgroundColor: '#1e293b',
+                                    titleColor: '#f1f5f9',
+                                    bodyColor: '#94a3b8',
+                                    borderColor: '#334155',
+                                    borderWidth: 1,
+                                    cornerRadius: 8,
+                                    padding: 12
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    grid: { color: 'rgba(51, 65, 85, 0.3)' },
+                                    ticks: { color: '#64748b', maxTicksLimit: 10, font: { size: 10 } }
+                                },
+                                y: {
+                                    type: 'linear',
+                                    display: true,
+                                    position: 'left',
+                                    grid: { color: 'rgba(51, 65, 85, 0.3)' },
+                                    ticks: { color: '#3b82f6', font: { size: 10 } },
+                                    title: { display: true, text: '共振股票数', color: '#3b82f6' }
+                                },
+                                y1: {
+                                    type: 'linear',
+                                    display: true,
+                                    position: 'right',
+                                    grid: { drawOnChartArea: false },
+                                    ticks: { color: '#94a3b8', font: { size: 10 } },
+                                    title: { display: true, text: '策略信号数', color: '#94a3b8' }
+                                }
+                            }
+                        }
+                    });
+                })
+                .catch(err => {
+                    console.error('Failed to load trend chart:', err);
+                });
+        }
+        
+        loadTrendChart();
+    </script>
+</body>
+</html>

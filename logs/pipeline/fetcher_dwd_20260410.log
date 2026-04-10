@@ -1,0 +1,8 @@
+2026-04-10 19:31:38 [INFO] fetcher_dwd: DWD表检查完成
+2026-04-10 19:31:38 [INFO] fetcher_dwd: DWDFetcher初始化完成, source=tushare
+2026-04-10 19:31:38 [INFO] fetcher_dwd: 开始更新股票信息, 数据源: tushare
+2026-04-10 19:31:38 [INFO] fetcher_dwd: 股票信息更新完成 (tushare): 记录5502条, 耗时0.5秒
+2026-04-10 19:31:39 [INFO] fetcher_dwd: DWD表检查完成
+2026-04-10 19:31:39 [INFO] fetcher_dwd: DWDFetcher初始化完成, source=tushare
+2026-04-10 19:31:39 [INFO] fetcher_dwd: 开始更新日线数据: 20260410 ~ 20260410
+2026-04-10 19:31:39 [INFO] fetcher_dwd: 日线数据更新完成: 成功1天, 失败0天, 记录5495条, 耗时0.5秒

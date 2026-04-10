@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多Agent智能股票分析 - OpenClaw Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-blue: #3b82f6;
+            --border-color: #334155;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+        }
+        
+        .glass-card {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+        }
+        
+        .decision-buy {
+            color: #10b981;
+        }
+        
+        .decision-hold {
+            color: #eab308;
+        }
+        
+        .decision-sell {
+            color: #ef4444;
+        }
+        
+        .confidence-high {
+            background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+        }
+        
+        .confidence-medium {
+            background: linear-gradient(90deg, #eab308 0%, #ca8a04 100%);
+        }
+        
+        .confidence-low {
+            background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+        }
+        
+        .research-bull {
+            border-left: 4px solid #10b981;
+        }
+        
+        .research-bear {
+            border-left: 4px solid #ef4444;
+        }
+        
+        .report-card {
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+        
+        .signal-value {
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+        
+        .signal-label {
+            color: var(--text-secondary);
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+        
+        .signal-number {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-6">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <header class="mb-6 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="/" class="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                    <span class="text-sm">返回持仓</span>
+                </a>
+                <a href="/agent/history" class="text-blue-400 hover:text-blue-300">历史记录</a>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold">多Agent智能股票分析</h1>
+                    <p class="text-sm text-slate-400">Multi-Agent Stock Analysis</p>
+                </div>
+            </div>
+            <div class="w-20"></div>
+        </header>
+        
+        <!-- Input Form -->
+        <div class="glass-card p-6 mb-6 animate-fade-in" style="animation-delay: 0.1s">
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="flex-1">
+                    <label class="block text-sm text-slate-400 mb-2">股票代码</label>
+                    <input type="text" id="symbol" placeholder="600519" 
+                           class="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
+                </div>
+                <div class="flex-1">
+                    <label class="block text-sm text-slate-400 mb-2">分析日期</label>
+                    <input type="date" id="trade_date" 
+                           class="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
+                </div>
+                <div class="flex items-end">
+                    <button onclick="analyzeStock()" 
+                            class="px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900">
+                        开始分析
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Loading State -->
+        <div id="loading" class="glass-card p-12 mb-6 text-center" style="display: none;">
+            <div class="flex flex-col items-center gap-4">
+                <svg class="w-16 h-16 text-blue-500 spinner" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                <p class="text-xl text-slate-300">分析中...</p>
+                <p class="text-sm text-slate-500">AI正在整合多维度信息，请稍候</p>
+            </div>
+        </div>
+        
+        <!-- Results Section -->
+        <div id="results" class="space-y-6" style="display: none;">
+            <!-- Decision Card -->
+            <div class="glass-card p-8 text-center animate-fade-in" style="animation-delay: 0.1s">
+                <p class="text-slate-400 text-sm mb-2">最终决策</p>
+                <p id="decision" class="text-5xl font-bold tracking-wide">-</p>
+                <p class="text-slate-500 text-sm mt-2">Final Decision</p>
+            </div>
+            
+            <!-- Confidence Bar -->
+            <div class="glass-card p-6 animate-fade-in" style="animation-delay: 0.15s">
+                <div class="flex justify-between items-center mb-3">
+                    <p class="text-slate-400 text-sm">置信度</p>
+                    <p id="confidence-text" class="text-slate-300 font-medium">0%</p>
+                </div>
+                <div class="w-full bg-slate-700 rounded-full h-3 overflow-hidden">
+                    <div id="confidence-bar" class="h-full rounded-full transition-all duration-500 confidence-medium" style="width: 0%"></div>
+                </div>
+            </div>
+            
+            <!-- Trading Signal Card -->
+            <div class="glass-card p-6 animate-fade-in" style="animation-delay: 0.2s">
+                <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                    </svg>
+                    交易信号 Trading Signal
+                </h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="signal-value">
+                        <p class="signal-label">入场价 Entry</p>
+                        <p id="entry-price" class="signal-number text-green-400">-</p>
+                    </div>
+                    <div class="signal-value">
+                        <p class="signal-label">止损价 Stop Loss</p>
+                        <p id="stop-loss" class="signal-number text-red-400">-</p>
+                    </div>
+                    <div class="signal-value">
+                        <p class="signal-label">止盈价 Take Profit</p>
+                        <p id="take-profit" class="signal-number text-blue-400">-</p>
+                    </div>
+                    <div class="signal-value">
+                        <p class="signal-label">仓位 Position</p>
+                        <p id="position-size" class="signal-number text-purple-400">-</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Research Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="glass-card p-6 research-bull animate-fade-in" style="animation-delay: 0.25s">
+                    <h3 class="text-lg font-semibold mb-3 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                        </svg>
+                        多头研究 Bull Research
+                    </h3>
+                    <div class="bg-slate-800/30 rounded-lg p-4 min-h-[120px]">
+                        <p id="bull-research" class="text-slate-300 leading-relaxed whitespace-pre-wrap">-</p>
+                    </div>
+                </div>
+                <div class="glass-card p-6 research-bear animate-fade-in" style="animation-delay: 0.3s">
+                    <h3 class="text-lg font-semibold mb-3 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6"></path>
+                        </svg>
+                        空头研究 Bear Research
+                    </h3>
+                    <div class="bg-slate-800/30 rounded-lg p-4 min-h-[120px]">
+                        <p id="bear-research" class="text-slate-300 leading-relaxed whitespace-pre-wrap">-</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Analysis Reports -->
+            <div class="glass-card p-6 animate-fade-in" style="animation-delay: 0.35s">
+                <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    专业分析报告 Analyst Reports
+                </h3>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <div class="report-card bg-slate-800/30 rounded-lg p-4">
+                        <h4 class="font-medium text-blue-400 mb-2 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4"></path>
+                            </svg>
+                            市场分析 Market
+                        </h4>
+                        <p id="market-report" class="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">-</p>
+                    </div>
+                    <div class="report-card bg-slate-800/30 rounded-lg p-4">
+                        <h4 class="font-medium text-orange-400 mb-2 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path>
+                            </svg>
+                            新闻分析 News
+                        </h4>
+                        <p id="news-report" class="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">-</p>
+                    </div>
+                    <div class="report-card bg-slate-800/30 rounded-lg p-4">
+                        <h4 class="font-medium text-green-400 mb-2 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                            基本面分析 Fundamentals
+                        </h4>
+                        <p id="fundamentals-report" class="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Research Manager Card -->
+            <div id="research-manager-card" class="glass-card p-6 animate-fade-in" style="animation-delay: 0.4s">
+                <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    研究经理结论 Research Manager
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Left: Recommendation + Confidence -->
+                    <div class="space-y-4">
+                        <div>
+                            <p class="text-sm text-slate-400 mb-1">推荐决策</p>
+                            <p id="research-recommendation" class="text-2xl font-bold text-blue-400">-</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-slate-400 mb-1">置信度</p>
+                            <p id="research-confidence" class="text-lg font-bold text-slate-200">-</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Right: Reasoning + Key Points -->
+                    <div class="space-y-4">
+                        <div>
+                            <p class="text-sm text-slate-400 mb-1">推理过程</p>
+                            <p id="research-reasoning" class="text-slate-300 leading-relaxed">-</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-slate-400 mb-1">关键要点</p>
+                            <ul id="research-key-points" class="text-slate-300 text-sm space-y-1 list-disc list-inside">
+                                <li>-</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Risk Manager Card -->
+            <div id="risk-manager-card" class="glass-card p-6 animate-fade-in" style="animation-delay: 0.4s">
+                <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                    风险经理评估 Risk Manager
+                </h3>
+                
+                <div class="space-y-4">
+                    <!-- Risk Level Badge -->
+                    <div class="flex items-center gap-3">
+                        <p class="text-sm text-slate-400">风险等级</p>
+                        <span id="risk-level-badge" class="px-3 py-1 rounded-full text-sm font-bold bg-yellow-500/20 text-yellow-400">
+                            MEDIUM
+                        </span>
+                    </div>
+                    
+                    <!-- Risk Stats Grid -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="text-center p-3 bg-slate-800/30 rounded-lg">
+                            <p class="text-xs text-slate-500 mb-1">风险评分</p>
+                            <p id="risk-score" class="text-lg font-bold text-slate-200">-</p>
+                        </div>
+                        <div class="text-center p-3 bg-slate-800/30 rounded-lg">
+                            <p class="text-xs text-slate-500 mb-1">建议止损</p>
+                            <p id="risk-stop-loss" class="text-lg font-bold text-red-400">-</p>
+                        </div>
+                        <div class="text-center p-3 bg-slate-800/30 rounded-lg">
+                            <p class="text-xs text-slate-500 mb-1">推荐仓位</p>
+                            <p id="risk-position-size" class="text-lg font-bold text-blue-400">-</p>
+                        </div>
+                        <div class="text-center p-3 bg-slate-800/30 rounded-lg">
+                            <p class="text-xs text-slate-500 mb-1">风险等级</p>
+                            <p id="risk-level-text" class="text-lg font-bold text-yellow-400">MEDIUM</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Bull/Bear Confidence Bars -->
+            <div class="glass-card p-6 animate-fade-in" style="animation-delay: 0.3s">
+                <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    多空置信度 Confidence
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Bull Confidence -->
+                    <div class="bull-confidence-bar">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl">🟢</span>
+                                <span class="text-slate-300">多头置信度 Bull</span>
+                            </div>
+                            <span id="bull-confidence-text" class="text-lg font-bold text-green-400">0%</span>
+                        </div>
+                        <div class="w-full bg-slate-700 rounded-full h-3 overflow-hidden">
+                            <div id="bull-confidence-bar-fill" class="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Bear Confidence -->
+                    <div class="bear-confidence-bar">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xl">🔴</span>
+                                <span class="text-slate-300">空头置信度 Bear</span>
+                            </div>
+                            <span id="bear-confidence-text" class="text-lg font-bold text-red-400">0%</span>
+                        </div>
+                        <div class="w-full bg-slate-700 rounded-full h-3 overflow-hidden">
+                            <div id="bear-confidence-bar-fill" class="h-full bg-gradient-to-r from-red-500 to-rose-400 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Three Debaters Debate View -->
+            <div class="glass-card p-6 animate-fade-in" style="animation-delay: 0.35s">
+                <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                    </svg>
+                    三方辩论 Three Debaters
+                </h3>
+                
+                <!-- 3-column debate cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 overflow-x-auto">
+                    <!-- Conservative -->
+                    <div id="debate-conservative-card" class="bg-slate-800/30 rounded-lg p-4 border-l-4 border-l-blue-400">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="text-2xl">🛡️</span>
+                            <h4 class="font-bold text-blue-400">保守派</h4>
+                        </div>
+                        <div class="space-y-2 text-sm mb-3">
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">置信度</span>
+                                <span id="conservative-confidence" class="text-blue-400">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">推荐仓位</span>
+                                <span id="conservative-position">-</span>
+                            </div>
+                        </div>
+                        <div class="pt-3 border-t border-slate-700">
+                            <p class="text-xs text-slate-500 mb-1">论点</p>
+                            <ul id="conservative-args" class="text-sm space-y-1">
+                                <li class="text-slate-300">-</li>
+                            </ul>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-slate-700">
+                            <p class="text-xs text-slate-500 mb-1">风险点</p>
+                            <ul id="conservative-risks" class="text-sm space-y-1">
+                                <li class="text-slate-300">-</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Neutral -->
+                    <div id="debate-neutral-card" class="bg-slate-800/30 rounded-lg p-4 border-l-4 border-l-yellow-400">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="text-2xl">⚖️</span>
+                            <h4 class="font-bold text-yellow-400">中立派</h4>
+                        </div>
+                        <div class="space-y-2 text-sm mb-3">
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">置信度</span>
+                                <span id="neutral-confidence" class="text-yellow-400">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">推荐仓位</span>
+                                <span id="neutral-position">-</span>
+                            </div>
+                        </div>
+                        <div class="pt-3 border-t border-slate-700">
+                            <p class="text-xs text-slate-500 mb-1">论点</p>
+                            <ul id="neutral-args" class="text-sm space-y-1">
+                                <li class="text-slate-300">-</li>
+                            </ul>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-slate-700">
+                            <p class="text-xs text-slate-500 mb-1">风险点</p>
+                            <ul id="neutral-risks" class="text-sm space-y-1">
+                                <li class="text-slate-300">-</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Aggressive -->
+                    <div id="debate-aggressive-card" class="bg-slate-800/30 rounded-lg p-4 border-l-4 border-l-red-400">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="text-2xl">🚀</span>
+                            <h4 class="font-bold text-red-400">激进派</h4>
+                        </div>
+                        <div class="space-y-2 text-sm mb-3">
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">置信度</span>
+                                <span id="aggressive-confidence" class="text-red-400">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">推荐仓位</span>
+                                <span id="aggressive-position">-</span>
+                            </div>
+                        </div>
+                        <div class="pt-3 border-t border-slate-700">
+                            <p class="text-xs text-slate-500 mb-1">论点</p>
+                            <ul id="aggressive-args" class="text-sm space-y-1">
+                                <li class="text-slate-300">-</li>
+                            </ul>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-slate-700">
+                            <p class="text-xs text-slate-500 mb-1">风险点</p>
+                            <ul id="aggressive-risks" class="text-sm space-y-1">
+                                <li class="text-slate-300">-</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Debate Aggregation Result -->
+                <div id="debate-aggregation" class="mt-4 p-3 bg-slate-800/50 rounded-lg">
+                    <div class="flex items-center justify-between text-sm">
+                        <div class="flex items-center gap-2">
+                            <span class="text-slate-400">投票结果:</span>
+                            <span id="debate-vote-result" class="text-blue-400 font-medium">-</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-slate-400">推荐仓位:</span>
+                            <span id="debate-position" class="text-green-400 font-bold">-</span>
+                        </div>
+                    </div>
+                    <p id="debate-consensus" class="text-sm text-slate-400 mt-2">-</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Error Display -->
+        <div id="error" class="glass-card p-6 border-red-500/50" style="display: none;">
+            <div class="flex items-center gap-3 text-red-400">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <p class="font-medium">错误</p>
+            </div>
+            <p id="error-msg" class="mt-3 text-slate-300">-</p>
+        </div>
+    </div>
+    
+    <script>
+        async function analyzeStock() {
+            const symbol = document.getElementById('symbol').value.trim();
+            const trade_date = document.getElementById('trade_date').value;
+            
+            if (!symbol) {
+                alert('请输入股票代码');
+                return;
+            }
+            
+            // Show loading, hide results
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+            
+            try {
+                const response = await fetch('/api/agent/analyze', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({symbol, trade_date})
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayResults(data);
+                } else {
+                    displayError(data.error || '分析失败');
+                }
+            } catch (e) {
+                displayError(e.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+        
+        // ====== Text Formatting Utilities ======
+        function formatTextAsHtml(text, options) {
+            if (!text) return '<span class="text-slate-500">-</span>';
+            
+            options = Object.assign({
+                maxLength: 300,
+                showToggle: true,
+                className: 'text-slate-300'
+            }, options || {});
+            
+            // Handle empty/null values
+            if (!text || text === '无' || text === 'null' || text === 'undefined') {
+                return '<span class="text-slate-500">-</span>';
+            }
+            
+            var result = '';
+            var lines = text.split('\n').filter(function(l) { return l.trim(); });
+            
+            // Check if text is list-like
+            var isList = lines.length > 1 && lines.every(function(line) {
+                return /^[-\d*•]/.test(line.trim()) || /^\d+[．、.]/.test(line.trim());
+            });
+            
+            if (isList) {
+                // Render as list
+                var listType = /^\d/.test(lines[0].trim()) ? 'ol' : 'ul';
+                var items = lines.map(function(line) {
+                    var content = line.replace(/^[-*\d\s．、.]+/, '').trim();
+                    if (!content) return '';
+                    return '<li class="mb-1">' + content + '</li>';
+                }).filter(function(item) { return item !== ''; }).join('');
+                
+                if (items) {
+                    result = '<' + listType + ' class="' + (listType === 'ol' ? 'list-decimal' : 'list-disc') + ' pl-5 space-y-1 text-sm">' + items + '</' + listType + '>';
+                }
+            } else {
+                // Render as paragraphs
+                var paragraphs = text.split(/\n\n+/).filter(function(p) { return p.trim(); });
+                if (paragraphs.length > 1) {
+                    result = paragraphs.map(function(p) {
+                        return '<p class="mb-3">' + p.trim().replace(/\n/g, '<br>') + '</p>';
+                    }).join('');
+                } else {
+                    result = '<p>' + text.replace(/\n/g, '<br>') + '</p>';
+                }
+            }
+            
+            // Handle truncation for long text
+            if (options.maxLength && text.length > options.maxLength) {
+                var shortText = text.substring(0, options.maxLength).replace(/\n/g, ' ');
+                var toggleId = 'toggle-' + Math.random().toString(36).substr(2, 9);
+                result = '<div class="' + options.className + '">' +
+                    '<div id="' + toggleId + '-short" class="line-clamp-3">' + shortText + '...</div>' +
+                    '<div id="' + toggleId + '-full" class="hidden">' + result + '</div>' +
+                    (options.showToggle ? 
+                        '<button class="text-blue-400 hover:text-blue-300 text-sm mt-2 focus:outline-none" ' +
+                        'onclick="toggleText(\'' + toggleId + '\', this)">展开全部 ▼</button>' : '') +
+                '</div>';
+            } else {
+                result = '<div class="' + options.className + '">' + result + '</div>';
+            }
+            
+            return result;
+        }
+        
+        function toggleText(id, btn) {
+            var shortEl = document.getElementById(id + '-short');
+            var fullEl = document.getElementById(id + '-full');
+            
+            if (shortEl.classList.contains('hidden')) {
+                shortEl.classList.remove('hidden');
+                fullEl.classList.add('hidden');
+                if (btn) btn.textContent = '展开全部 ▼';
+            } else {
+                shortEl.classList.add('hidden');
+                fullEl.classList.remove('hidden');
+                if (btn) btn.textContent = '收起 ▲';
+            }
+        }
+        
+        function displayResults(data) {
+            // Update decision
+            const decision = data.final_decision || data.research?.recommendation || '观望';
+            const decisionEl = document.getElementById('decision');
+            decisionEl.textContent = decision;
+            
+            if (decision.includes('买')) {
+                decisionEl.className = 'text-5xl font-bold tracking-wide decision-buy';
+            } else if (decision.includes('卖')) {
+                decisionEl.className = 'text-5xl font-bold tracking-wide decision-sell';
+            } else {
+                decisionEl.className = 'text-5xl font-bold tracking-wide decision-hold';
+            }
+            
+            // Update confidence bar
+            const confidence = (data.confidence || data.research?.confidence || 0.5);
+            const confidencePct = confidence * 100;
+            const confidenceBar = document.getElementById('confidence-bar');
+            const confidenceText = document.getElementById('confidence-text');
+            
+            confidenceBar.style.width = confidencePct + '%';
+            confidenceText.textContent = confidencePct.toFixed(0) + '%';
+            
+            // Set bar color based on confidence
+            if (confidence > 0.6) {
+                confidenceBar.className = 'h-full rounded-full transition-all duration-500 confidence-high';
+            } else if (confidence >= 0.4) {
+                confidenceBar.className = 'h-full rounded-full transition-all duration-500 confidence-medium';
+            } else {
+                confidenceBar.className = 'h-full rounded-full transition-all duration-500 confidence-low';
+            }
+            
+            // Update trading signal
+            const signal = data.trading_signal || {};
+            document.getElementById('entry-price').textContent = signal.entry_price || '-';
+            document.getElementById('stop-loss').textContent = signal.stop_loss || '-';
+            document.getElementById('take-profit').textContent = signal.take_profit || '-';
+            document.getElementById('position-size').textContent = 
+                signal.position_size ? (signal.position_size * 100).toFixed(0) + '%' : '-';
+            
+            // Update research
+            var bullEl = document.getElementById('bull-research');
+            if (bullEl) bullEl.innerHTML = formatTextAsHtml(data.bull_research || data.reports?.bull_research, {
+                maxLength: 300,
+                showToggle: true,
+                className: 'text-sm leading-relaxed'
+            });
+            
+            var bearEl = document.getElementById('bear-research');
+            if (bearEl) bearEl.innerHTML = formatTextAsHtml(data.bear_research || data.reports?.bear_research, {
+                maxLength: 300,
+                showToggle: true,
+                className: 'text-sm leading-relaxed'
+            });
+            
+            // Update reports with formatting
+            var marketEl = document.getElementById('market-report');
+            if (marketEl) marketEl.innerHTML = formatTextAsHtml(data.reports?.market, {
+                maxLength: 400,
+                showToggle: true,
+                className: 'text-sm leading-relaxed'
+            });
+            
+            var newsEl = document.getElementById('news-report');
+            if (newsEl) newsEl.innerHTML = formatTextAsHtml(data.reports?.news, {
+                maxLength: 400,
+                showToggle: true,
+                className: 'text-sm leading-relaxed'
+            });
+            
+            var fundamentalsEl = document.getElementById('fundamentals-report');
+            if (fundamentalsEl) fundamentalsEl.innerHTML = formatTextAsHtml(data.reports?.fundamentals, {
+                maxLength: 400,
+                showToggle: true,
+                className: 'text-sm leading-relaxed'
+            });
+            
+            // ====== NEW CODE: Bull/Bear Confidence Bars ======
+            // Bull Confidence
+            if (data.bull_confidence != null) {
+                const bullPct = (data.bull_confidence * 100).toFixed(0);
+                const bullBar = document.getElementById('bull-confidence-bar-fill');
+                const bullText = document.getElementById('bull-confidence-text');
+                if (bullBar) bullBar.style.width = bullPct + '%';
+                if (bullText) bullText.textContent = bullPct + '%';
+            }
+            
+            // Bear Confidence
+            if (data.bear_confidence != null) {
+                const bearPct = (data.bear_confidence * 100).toFixed(0);
+                const bearBar = document.getElementById('bear-confidence-bar-fill');
+                const bearText = document.getElementById('bear-confidence-text');
+                if (bearBar) bearBar.style.width = bearPct + '%';
+                if (bearText) bearText.textContent = bearPct + '%';
+            }
+            
+            // ====== NEW CODE: Debate View Rendering ======
+            function renderDebateView(view, prefix) {
+                if (!view) return;
+                const confEl = document.getElementById(prefix + '-confidence');
+                const posEl = document.getElementById(prefix + '-position');
+                const argsEl = document.getElementById(prefix + '-args');
+                const risksEl = document.getElementById(prefix + '-risks');
+                if (confEl) confEl.textContent = view.confidence ? (view.confidence * 100).toFixed(0) + '%' : '-';
+                if (posEl) posEl.textContent = view.recommended_position ? (view.recommended_position * 100).toFixed(0) + '%' : '-';
+                if (argsEl) {
+                    if (view.arguments && view.arguments.length > 0) {
+                        argsEl.innerHTML = view.arguments.map(function(arg, idx) {
+                            return '<li class="mb-2">' + formatTextAsHtml(arg, {maxLength: 250, showToggle: true, className: 'text-sm leading-relaxed'}) + '</li>';
+                        }).join('');
+                    } else {
+                        argsEl.innerHTML = '<li class="text-slate-500">-</li>';
+                    }
+                }
+                if (risksEl) {
+                    if (view.risk_points && view.risk_points.length > 0) {
+                        risksEl.innerHTML = view.risk_points.map(function(risk, idx) {
+                            return '<li class="mb-2">' + formatTextAsHtml(risk, {maxLength: 200, showToggle: true, className: 'text-sm leading-relaxed'}) + '</li>';
+                        }).join('');
+                    } else {
+                        risksEl.innerHTML = '<li class="text-slate-500">-</li>';
+                    }
+                }
+            }
+            
+            if (data.debate_result) {
+                renderDebateView(data.debate_result.conservative_view, 'conservative');
+                renderDebateView(data.debate_result.neutral_view, 'neutral');
+                renderDebateView(data.debate_result.aggressive_view, 'aggressive');
+                
+                var voteResult = document.getElementById('debate-vote-result');
+                var debatePos = document.getElementById('debate-position');
+                var consensus = document.getElementById('debate-consensus');
+                if (voteResult && data.debate_result.final_risk_level) voteResult.textContent = data.debate_result.final_risk_level;
+                if (debatePos && data.debate_result.recommended_position) debatePos.textContent = (data.debate_result.recommended_position * 100).toFixed(0) + '%';
+                if (consensus) consensus.textContent = data.debate_result.consensus || '-';
+            }
+            
+            // ====== NEW CODE: ResearchManager Card ======
+            if (data.research) {
+                var recEl = document.getElementById('research-recommendation');
+                var confEl2 = document.getElementById('research-confidence');
+                var reasonEl = document.getElementById('research-reasoning');
+                var kpEl = document.getElementById('research-key-points');
+                if (recEl) recEl.textContent = data.research.recommendation || '-';
+                if (confEl2) confEl2.textContent = data.research.confidence ? (data.research.confidence * 100).toFixed(0) + '%' : '-';
+                if (reasonEl) reasonEl.innerHTML = formatTextAsHtml(data.research.reasoning, {
+                    maxLength: 300,
+                    showToggle: true,
+                    className: 'text-sm leading-relaxed'
+                });
+                if (kpEl && data.research.key_points && data.research.key_points.length > 0) {
+                    kpEl.innerHTML = data.research.key_points.map(function(k) { return '<li>' + k + '</li>'; }).join('');
+                } else if (kpEl) {
+                    kpEl.innerHTML = '<li>-</li>';
+                }
+            }
+            
+            // ====== NEW CODE: RiskManager Card ======
+            if (data.risk) {
+                var levelBadge = document.getElementById('risk-level-badge');
+                var levelText = document.getElementById('risk-level-text');
+                var scoreEl = document.getElementById('risk-score');
+                var stopLossEl = document.getElementById('risk-stop-loss');
+                var posEl2 = document.getElementById('risk-position-size');
+                var riskLevel = data.risk.risk_level || 'MEDIUM';
+                if (levelBadge) {
+                    levelBadge.textContent = riskLevel;
+                    levelBadge.className = 'px-3 py-1 rounded-full text-sm font-bold';
+                    if (riskLevel === 'LOW') levelBadge.className += ' bg-green-500/20 text-green-400';
+                    else if (riskLevel === 'HIGH') levelBadge.className += ' bg-red-500/20 text-red-400';
+                    else levelBadge.className += ' bg-yellow-500/20 text-yellow-400';
+                }
+                if (levelText) levelText.textContent = riskLevel;
+                if (scoreEl) scoreEl.textContent = data.risk.risk_score != null ? data.risk.risk_score.toFixed(2) : '-';
+                if (stopLossEl) stopLossEl.textContent = data.risk.stop_loss ? data.risk.stop_loss.toFixed(2) : '-';
+                if (posEl2) posEl2.textContent = data.risk.position_size ? (data.risk.position_size * 100).toFixed(0) + '%' : '-';
+            }
+            
+            document.getElementById('results').style.display = 'block';
+        }
+        
+        function displayError(msg) {
+            document.getElementById('error-msg').textContent = msg;
+            document.getElementById('error').style.display = 'block';
+        }
+        
+        // Set default date to today
+        document.getElementById('trade_date').valueAsDate = new Date();
+    </script>
+</body>
+</html>
